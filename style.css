@@ -1,0 +1,5 @@
+/* Drag file ယူလာချိန်တွင် ပြသမည့် အရောင်များ */
+.drag-over {
+    border-color: #3b82f6 !important; /* Tailwind Blue 500 */
+    background-color: #eff6ff !important; /* Tailwind Blue 50 */
+}
