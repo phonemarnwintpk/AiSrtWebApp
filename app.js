@@ -1,135 +1,111 @@
-// UI Elements များကို ဖမ်းယူခြင်း
+// UI Elements
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const fileStatus = document.getElementById('fileStatus');
-const srtPreview = document.getElementById('srtPreview');
+const videoLinkInput = document.getElementById('videoLink'); // URL Input
 const downloadBtn = document.getElementById('downloadBtn');
 
-// 1. Click နှိပ်၍ File ရွေးချယ်ခြင်း
+// သင့် Backend Server ၏ URL (Render တွင် တင်ပြီးပါက ဤနေရာတွင် ပြောင်းထည့်ပါ)
+const BACKEND_URL = "https://your-backend-url.onrender.com"; 
+
 dropZone.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
-        handleFile(fileInput.files[0]);
+        handleMediaInput(fileInput.files[0]);
     }
 });
 
-// 2. Drag & Drop ဖြင့် File ဆွဲထည့်ခြင်း
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
-});
+// Main Logic 
+async function handleMediaInput(file) {
+    const videoUrl = videoLinkInput.value.trim();
 
-dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('drag-over');
-});
-
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    if (e.dataTransfer.files.length > 0) {
-        fileInput.files = e.dataTransfer.files;
-        handleFile(e.dataTransfer.files[0]);
+    // 1. URL ရှိနေပါက File Upload ကို ကျော်ပြီး URL ကိုသာ Backend သို့ ပို့မည်
+    if (videoUrl) {
+        fileStatus.textContent = `🔗 Processing URL: ${videoUrl}`;
+        fileStatus.classList.remove('hidden');
+        await processVideoUrl(videoUrl);
+        return;
     }
-});
 
-// 3. File အား API သို့ပို့ရန် Logic အစစ်
-async function handleFile(file) {
+    // 2. URL မရှိပါက File ကို စစ်ဆေးပြီး Upload တင်မည်
+    if (!file) return;
+
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
     fileStatus.textContent = `✅ File selected: ${file.name} (${fileSizeMB} MB)`;
     fileStatus.classList.remove('hidden');
 
-    const apiKey = document.getElementById('apiKey').value;
-    const langSelect = document.getElementById('langSelect').value;
-
-    if (!apiKey) {
-        alert("⚠️ ကျေးဇူးပြု၍ Google Gemini API Key ကို အရင်ထည့်ပါ။");
-        return;
-    }
-
-    // UI ကို Loading အခြေအနေ ပြောင်းခြင်း
-    srtPreview.textContent = "⏳ AI ခွဲခြမ်းစိတ်ဖြာနေပါသည်... ကျေးဇူးပြု၍ ခဏစောင့်ပါ။ (ဖိုင်အရွယ်အစားပေါ်မူတည်၍ အချိန်ကြာနိုင်ပါသည်။)";
-    downloadBtn.disabled = true;
-    downloadBtn.classList.remove('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'cursor-pointer', 'shadow-md');
-    downloadBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-
+    const MB = 1024 * 1024;
+    
     try {
-        // ဖိုင်ကို Base64 Format သို့ ပြောင်းခြင်း (Gemini API သို့ ပို့ရန်)
-        const base64Data = await fileToBase64(file);
-        const mimeType = file.type || "audio/mp3";
+        if (file.size <= 50 * MB) {
+            // 50MB နှင့် အောက်ဆိုလျှင် Chunk မခွဲဘဲ တစ်ခါတည်း တိုက်ရိုက်တင်မည်
+            await uploadSingleFile(file);
+        } else {
+            // 50MB အထက်ဆိုလျှင် Smart Chunking ဖြင့် တင်မည်
+            await uploadInChunks(file);
+        }
+    } catch (error) {
+        console.error("Upload Error:", error);
+        alert("Upload Failed: " + error.message);
+    }
+}
 
-        // Gemini သို့ ညွှန်ကြားမည့် Prompt
-        const languagePrompt = langSelect === 'my' ? 'Myanmar (Burmese)' : 'English';
-        const promptText = `You are a professional subtitle generator. Listen to the provided media file and generate a highly accurate SRT subtitle file translated to ${languagePrompt}. 
-        Output ONLY the raw SRT text format. Do not include markdown tags like \`\`\` text. Do not add any explanations.
-        Make sure the timestamps align perfectly with the speech.`;
+// URL တိုက်ရိုက်ပို့သည့် Function
+async function processVideoUrl(url) {
+    console.log("Sending URL to backend:", url);
+    // Backend ရှိ /process-url သို့ API လှမ်းခေါ်မည့် အပိုင်း (နောက် Task တွင် ထပ်ဖြည့်မည်)
+}
 
-        // Request Body ပြင်ဆင်ခြင်း
-        const requestBody = {
-            contents: [{
-                parts: [
-                    { text: promptText },
-                    {
-                        inline_data: {
-                            mime_type: mimeType,
-                            data: base64Data.split(',')[1] // 'data:audio/mp3;base64,' အစပိုင်းကို ဖြတ်ထုတ်ခြင်း
-                        }
-                    }
-                ]
-            }]
-        };
+// 50MB အောက် File များကို တစ်ခါတည်းတင်သည့် Function
+async function uploadSingleFile(file) {
+    console.log("Uploading as a single file (<= 50MB)...");
+    const formData = new FormData();
+    formData.append("file", file);
 
-        // API လှမ်းခေါ်ခြင်း (gemini-1.5-flash သည် Audio/Video ကို မြန်ဆန်စွာ support ပေးသည်)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+    const response = await fetch(`${BACKEND_URL}/upload-single`, {
+        method: "POST",
+        body: formData
+    });
+    
+    if(!response.ok) throw new Error("Single upload failed.");
+    const data = await response.json();
+    console.log("Upload Success:", data);
+}
+
+// 50MB အထက် File များကို အပိုင်းခွဲ (Smart Chunking) ဖြင့် တင်သည့် Function
+async function uploadInChunks(file) {
+    const fileSize = file.size;
+    const MB = 1024 * 1024;
+    
+    // Auto-Calculated Chunk Size: 50MB မှ 100MB ကြား တွက်ချက်ခြင်း
+    let chunkSize = Math.max(50 * MB, Math.min(100 * MB, Math.ceil(fileSize / 10))); 
+    const totalChunks = Math.ceil(fileSize / chunkSize);
+    const fileName = file.name;
+
+    console.log(`Starting chunked upload: Total ${totalChunks} chunks of size ${(chunkSize/MB).toFixed(2)} MB.`);
+
+    for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, fileSize);
+        const chunk = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append("chunk", chunk);
+        formData.append("fileName", fileName);
+        formData.append("chunkIndex", i);
+        formData.append("totalChunks", totalChunks);
+
+        fileStatus.textContent = `⏳ Uploading... Part ${i + 1} of ${totalChunks}`;
+
+        const response = await fetch(`${BACKEND_URL}/upload-chunk`, {
+            method: "POST",
+            body: formData
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || "API ချိတ်ဆက်မှု အဆင်မပြေပါ။");
-        }
-
-        const data = await response.json();
-        
-        // Result ပြသခြင်း
-        const generatedText = data.candidates[0].content.parts[0].text;
-        srtPreview.textContent = generatedText.trim();
-
-        // Download Button ကို ဖွင့်ပေးခြင်း
-        setupDownload(generatedText, file.name);
-
-    } catch (error) {
-        console.error("Error:", error);
-        srtPreview.textContent = `❌ အမှားအယွင်းဖြစ်ပေါ်နေပါသည်: ${error.message}\n\n(မှတ်ချက် - ဖိုင်အရမ်းကြီးလွန်းပါက (သို့) API Key မှားယွင်းနေပါက ဤ Error တက်နိုင်ပါသည်။)`;
+        if (!response.ok) throw new Error(`Chunk ${i+1} upload failed.`);
     }
-}
 
-// Helper 1: File to Base64
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-}
-
-// Helper 2: Setup Download Button
-function setupDownload(srtText, originalFileName) {
-    downloadBtn.disabled = false;
-    downloadBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-    downloadBtn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'cursor-pointer', 'shadow-md');
-
-    downloadBtn.onclick = () => {
-        const blob = new Blob([srtText], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        // မူရင်းဖိုင်နာမည်နောက်တွင် _subtitle.srt တပ်၍ ဒေါင်းလုဒ်ချပေးမည်
-        a.download = originalFileName.substring(0, originalFileName.lastIndexOf('.')) + "_subtitle.srt";
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    console.log("All chunks uploaded successfully.");
+    fileStatus.textContent = `✅ Upload Complete: ${fileName}`;
 }

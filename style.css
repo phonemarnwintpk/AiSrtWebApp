@@ -1,5 +1,30 @@
-/* Drag file ယူလာချိန်တွင် ပြသမည့် အရောင်များ */
+/* Custom Font Integration */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera (Makes it look like a native app) */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #475569; /* slate-600 */
+    border-radius: 10px;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.custom-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: thin;  /* Firefox */
+}
+
+/* Drag over interactive state */
 .drag-over {
-    border-color: #3b82f6 !important; /* Tailwind Blue 500 */
-    background-color: #eff6ff !important; /* Tailwind Blue 50 */
+    border-color: #6366f1 !important; /* Tailwind Indigo 500 */
+    background-color: #e0e7ff !important; /* Tailwind Indigo 100 */
 }
