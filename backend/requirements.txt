@@ -1,6 +1,6 @@
 fastapi
 uvicorn
 python-multipart
-yt-dlp
+git+https://github.com/yt-dlp/yt-dlp.git
 httpx
 imageio-ffmpeg

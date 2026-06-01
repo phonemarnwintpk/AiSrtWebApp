@@ -33,6 +33,9 @@ async def process_url(
     output_filename = os.path.join(UPLOAD_DIR, "downloaded_speech")
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     
+        # ဤနေရာသည် Render တွင် FFmpeg ကို အတင်းခေါ်သုံးသည့် အဓိကအပိုင်းဖြစ်သည်
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': output_filename,
@@ -42,10 +45,21 @@ async def process_url(
             'preferredcodec': 'mp3',
             'preferredquality': '128',
         }],
-        'extractor_args': {'youtube': {'player_client': ['android']}},
+        # 🔥 YouTube & TikTok Bot Block ကို ကျော်ဖြတ်ရန် "Chrome Browser" ကဲ့သို့ ရုပ်ဖျက်ခြင်း
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+            'Sec-Fetch-Mode': 'navigate',
+        },
+        'extractor_args': {
+            'youtube': {'player_client': ['android']},
+            'tiktok': {'app_info': '1'} # TikTok အတွက် သီးသန့်ရုပ်ဖျက်
+        },
         'quiet': True,
         'no_warnings': True
     }
+
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
