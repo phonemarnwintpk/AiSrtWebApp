@@ -1,195 +1,231 @@
+// ⚠️ သင်၏ Hugging Face Space URL ကို ဤနေရာတွင် ထည့်ပါ (အနောက်တွင် / မပါစေရ)
+const BACKEND_URL = "https://marnlaypk-aisrtwebappbackend.hf.space";
+
 // UI Elements
+const apiKeyInput = document.getElementById('apiKey');
+const saveKeyBtn = document.getElementById('saveKeyBtn');
+const keyStatusBadge = document.getElementById('keyStatusBadge');
+const videoLinkInput = document.getElementById('videoLink');
+const processLinkBtn = document.getElementById('processLinkBtn');
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const fileStatus = document.getElementById('fileStatus');
-const videoLinkInput = document.getElementById('videoLink');
-const processLinkBtn = document.getElementById('processLinkBtn'); // GO Button
 const srtPreview = document.getElementById('srtPreview');
 const downloadBtn = document.getElementById('downloadBtn');
+const historyList = document.getElementById('historyList');
+const emptyHistoryMsg = document.getElementById('emptyHistoryMsg');
 
-const BACKEND_URL = "https://aisrtwebappbackend.onrender.com"; 
-
-dropZone.addEventListener('click', () => fileInput.click());
-
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length > 0) {
-        handleMediaFile(fileInput.files[0]);
+// --- 1. API KEY PERSISTENCE (LocalStorage) ---
+function loadApiKey() {
+    const savedKey = localStorage.getItem('geminiApiKey');
+    if (savedKey) {
+        apiKeyInput.value = savedKey;
+        keyStatusBadge.textContent = "Saved";
+        keyStatusBadge.className = "px-2 py-1 bg-green-100 text-green-600 text-[10px] rounded-full font-bold";
     }
-});
+}
 
-// 🔥 "Go" ခလုတ်နှိပ်မှသာ အလုပ်လုပ်မည့် စနစ်
-processLinkBtn.addEventListener('click', async () => {
-    const videoUrl = videoLinkInput.value.trim();
-    if (videoUrl.startsWith("http://") || videoUrl.startsWith("https://")) {
-        fileStatus.textContent = `🔗 Link မှတစ်ဆင့် လုပ်ငန်းစဉ် စတင်နေပါသည်...`;
-        fileStatus.classList.remove('hidden');
-        fileInput.value = ""; 
-        await processVideoUrl(videoUrl);
+saveKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    if (key) {
+        localStorage.setItem('geminiApiKey', key);
+        keyStatusBadge.textContent = "Saved";
+        keyStatusBadge.className = "px-2 py-1 bg-green-100 text-green-600 text-[10px] rounded-full font-bold";
+        alert("✅ API Key သိမ်းဆည်းပြီးပါပြီ။");
     } else {
-        alert("⚠️ ကျေးဇူးပြု၍ မှန်ကန်သော YouTube သို့မဟုတ် Video Link ထည့်သွင်းပါ။");
+        localStorage.removeItem('geminiApiKey');
+        keyStatusBadge.textContent = "Not Saved";
+        keyStatusBadge.className = "px-2 py-1 bg-red-100 text-red-600 text-[10px] rounded-full font-bold";
     }
 });
+loadApiKey(); // On Page Load
 
-async function processVideoUrl(url) {
-    const apiKey = document.getElementById('apiKey').value;
-    const langSelect = document.getElementById('langSelect').value;
+// --- 2. ADVANCED RATE LIMIT TIMER (Persists across reload) ---
+const COOLDOWN_SECONDS = 60;
+let timerInterval;
 
-    if (!apiKey) {
-        alert("⚠️ ကျေးဇူးပြု၍ Google Gemini API Key ကို အရင်ထည့်ပါ။");
-        return;
+function startRateLimitTimer() {
+    const endTime = Date.now() + (COOLDOWN_SECONDS * 1000);
+    localStorage.setItem('rateLimitEnd', endTime);
+    updateTimerUI();
+}
+
+function updateTimerUI() {
+    clearInterval(timerInterval);
+    const timerCircle = document.getElementById('timerCircle');
+    const timerText = document.getElementById('timerText');
+    const timerStatus = document.getElementById('timerStatus');
+
+    timerInterval = setInterval(() => {
+        const endTime = localStorage.getItem('rateLimitEnd');
+        if (!endTime) return clearInterval(timerInterval);
+
+        const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+        
+        if (remaining > 0) {
+            timerText.textContent = `${remaining}s`;
+            timerStatus.textContent = "Cooling down...";
+            timerStatus.className = "text-[10px] text-orange-500 font-semibold";
+            const percent = (remaining / COOLDOWN_SECONDS) * 100;
+            timerCircle.setAttribute('stroke-dashoffset', 100 - percent);
+            timerCircle.classList.replace('text-blue-600', 'text-orange-500');
+        } else {
+            timerText.textContent = "Rdy";
+            timerStatus.textContent = "Available";
+            timerStatus.className = "text-[10px] text-green-500 font-semibold";
+            timerCircle.setAttribute('stroke-dashoffset', 0);
+            timerCircle.classList.replace('text-orange-500', 'text-blue-600');
+            localStorage.removeItem('rateLimitEnd');
+            clearInterval(timerInterval);
+        }
+    }, 1000);
+}
+updateTimerUI(); // Check on Page Load
+
+// --- 3. TRANSLATION HISTORY (LocalStorage) ---
+function saveHistory(title, srtContent) {
+    let history = JSON.parse(localStorage.getItem('srtHistory')) || [];
+    const newItem = {
+        id: Date.now(),
+        title: title.substring(0, 30) + (title.length > 30 ? '...' : ''),
+        date: new Date().toLocaleString(),
+        srt: srtContent
+    };
+    history.unshift(newItem); // Add to top
+    if (history.length > 15) history.pop(); // Keep only last 15
+    localStorage.setItem('srtHistory', JSON.stringify(history));
+    renderHistory();
+}
+
+function renderHistory() {
+    let history = JSON.parse(localStorage.getItem('srtHistory')) || [];
+    historyList.innerHTML = '';
+    
+    if (history.length === 0) {
+        emptyHistoryMsg.style.display = 'block';
+    } else {
+        emptyHistoryMsg.style.display = 'none';
+        history.forEach(item => {
+            const div = document.createElement('div');
+            div.className = "bg-gray-50 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition group";
+            div.innerHTML = `
+                <h4 class="text-sm font-bold text-gray-800 group-hover:text-blue-600 truncate">${item.title}</h4>
+                <p class="text-[10px] text-gray-400 mt-1">${item.date}</p>
+            `;
+            // Click history item to load SRT to preview
+            div.onclick = () => {
+                srtPreview.textContent = item.srt;
+                setupDownload(item.srt, item.title);
+                fileStatus.textContent = "Loaded from history";
+                fileStatus.classList.remove('hidden');
+            };
+            historyList.appendChild(div);
+        });
+    }
+}
+
+document.getElementById('clearHistoryBtn').onclick = () => {
+    if(confirm("သမိုင်းကြောင်း အားလုံးကို ဖျက်ရန် သေချာပါသလား?")) {
+        localStorage.removeItem('srtHistory');
+        renderHistory();
+    }
+};
+renderHistory(); // On Page Load
+
+// --- 4. MAIN PROCESSING LOGIC ---
+const getApiKey = () => localStorage.getItem('geminiApiKey') || ""; // Fallback allowed
+
+processLinkBtn.addEventListener('click', async () => {
+    const url = videoLinkInput.value.trim();
+    if (!url) return alert("⚠️ Link ထည့်ပါ။");
+    
+    if (localStorage.getItem('rateLimitEnd') > Date.now()) {
+        return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
     }
 
-    srtPreview.textContent = "⏳ Backend Server မှ ဗီဒီယိုကို စတင်ဒေါင်းလုဒ်ဆွဲပြီး အသံခွဲထုတ်နေပါသည်...\n(ဤလုပ်ငန်းစဉ်သည် မိနစ်အနည်းငယ် ကြာနိုင်ပါသည်၊ ကျေးဇူးပြု၍ စောင့်ပေးပါ။)";
-    disableDownloadButton();
-    processLinkBtn.disabled = true;
-    processLinkBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    startUiProcessing("Link မှတစ်ဆင့် လုပ်ငန်းစဉ် စတင်နေပါသည်...");
+    const lang = document.getElementById('langSelect').value;
 
     try {
         const formData = new FormData();
         formData.append("url", url);
-        formData.append("apiKey", apiKey);
-        formData.append("lang", langSelect);
-
-        const response = await fetch(`${BACKEND_URL}/process-url`, {
-            method: "POST",
-            body: formData
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText);
-        }
-
-        const data = await response.json();
-        
-        if (data.status === "success" && data.srt_text) {
-            const generatedText = data.srt_text.trim() + '\n\n';
-            srtPreview.textContent = generatedText;
-            fileStatus.textContent = `✅ SRT ထုတ်ယူခြင်း အောင်မြင်ပါပြီ။`;
-            setupDownload(generatedText, "online_video");
-        } else {
-            throw new Error(data.message || "စာတန်းထိုး ထွက်မလာပါ။");
-        }
-
-    } catch (error) {
-        alert(`❌ အမှားအယွင်းရှိနေပါသည်: ${error.message}`);
-        srtPreview.textContent = `❌ Server ပြဿနာ: ${error.message}`;
-        fileStatus.textContent = `❌ လုပ်ငန်းစဉ် ရပ်တန့်သွားပါပြီ။`;
-    } finally {
-        processLinkBtn.disabled = false;
-        processLinkBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-}
-
-async function handleMediaFile(file) {
-    videoLinkInput.value = ""; 
-    const apiKey = document.getElementById('apiKey').value;
-    const langSelect = document.getElementById('langSelect').value;
-
-    if (!apiKey) {
-        alert("⚠️ ကျေးဇူးပြု၍ Google Gemini API Key ကို အရင်ထည့်ပါ။");
-        fileInput.value = "";
-        return;
-    }
-
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    fileStatus.textContent = `✅ File selected: ${file.name} (${fileSizeMB} MB)`;
-    fileStatus.classList.remove('hidden');
-    disableDownloadButton();
-
-    const MB = 1024 * 1024;
-    
-    try {
-        if (file.size <= 50 * MB) {
-            await uploadSingleFile(file, apiKey, langSelect);
-        } else {
-            await uploadInChunks(file, apiKey, langSelect);
-        }
-    } catch (error) {
-        alert(`❌ ဖိုင်တင်ခြင်း မအောင်မြင်ပါ: ${error.message}`);
-        srtPreview.textContent = `❌ Upload Error: ${error.message}`;
-    }
-}
-
-async function uploadSingleFile(file, apiKey, lang) {
-    srtPreview.textContent = "⏳ ဖိုင်အား Server သို့ တိုက်ရိုက်စနစ်ဖြင့် ပို့နေပါသည်...";
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("apiKey", apiKey);
-    formData.append("lang", lang);
-
-    const response = await fetch(`${BACKEND_URL}/upload-single`, {
-        method: "POST",
-        body: formData
-    });
-    
-    if(!response.ok) throw new Error(`Upload Failed: ${response.status}`);
-    const data = await response.json();
-    handleBackendSrtResult(data, file.name);
-}
-
-async function uploadInChunks(file, apiKey, lang) {
-    const fileSize = file.size;
-    const MB = 1024 * 1024;
-    let chunkSize = Math.max(50 * MB, Math.min(100 * MB, Math.ceil(fileSize / 10))); 
-    const totalChunks = Math.ceil(fileSize / chunkSize);
-    const fileName = file.name;
-
-    for (let i = 0; i < totalChunks; i++) {
-        const start = i * chunkSize;
-        const end = Math.min(start + chunkSize, fileSize);
-        const chunk = file.slice(start, end);
-
-        const formData = new FormData();
-        formData.append("chunk", chunk);
-        formData.append("fileName", fileName);
-        formData.append("chunkIndex", i);
-        formData.append("totalChunks", totalChunks);
-        formData.append("apiKey", apiKey);
+        formData.append("apiKey", getApiKey());
         formData.append("lang", lang);
 
-        fileStatus.textContent = `⏳ Uploading Part ${i + 1} of ${totalChunks}...`;
-
-        const response = await fetch(`${BACKEND_URL}/upload-chunk`, {
-            method: "POST",
-            body: formData
-        });
-
-        if (!response.ok) throw new Error(`Part ${i+1} တင်ခြင်း မအောင်မြင်ပါ။`);
+        const res = await fetch(`${BACKEND_URL}/process-url`, { method: "POST", body: formData });
+        if (!res.ok) throw new Error(await res.text());
         
-        const data = await response.json();
-        if (data.status === "success" && data.srt_text) {
-            handleBackendSrtResult(data, fileName);
-            return;
-        }
+        const data = await res.json();
+        handleSuccess(data.srt_text, url);
+    } catch (error) {
+        handleError(error);
     }
-}
+});
 
-function handleBackendSrtResult(data, name) {
-    const generatedText = data.srt_text.trim() + '\n\n';
-    srtPreview.textContent = generatedText;
-    fileStatus.textContent = `✅ ပြီးမြောက်ပါပြီ။`;
-    setupDownload(generatedText, name);
-}
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
 
-function disableDownloadButton() {
+    if (localStorage.getItem('rateLimitEnd') > Date.now()) {
+        return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
+    }
+
+    startUiProcessing(`Uploading ${file.name}...`);
+    const lang = document.getElementById('langSelect').value;
+
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("apiKey", getApiKey());
+        formData.append("lang", lang);
+
+        const res = await fetch(`${BACKEND_URL}/upload-single`, { method: "POST", body: formData });
+        if (!res.ok) throw new Error(await res.text());
+        
+        const data = await res.json();
+        handleSuccess(data.srt_text, file.name);
+    } catch (error) {
+        handleError(error);
+    }
+    fileInput.value = "";
+});
+
+// UI Helper Functions
+function startUiProcessing(msg) {
+    srtPreview.textContent = `⏳ ${msg}\nBackend Server တွင် အလုပ်လုပ်နေပါသည်...`;
+    fileStatus.textContent = "Processing...";
+    fileStatus.classList.remove('hidden');
     downloadBtn.disabled = true;
-    downloadBtn.classList.remove('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'cursor-pointer', 'shadow-md');
-    downloadBtn.classList.add('bg-gray-200', 'text-gray-400', 'cursor-not-allowed');
+    downloadBtn.className = "mt-4 w-full bg-gray-700 text-gray-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition flex items-center justify-center gap-2";
 }
 
-function setupDownload(srtText, originalFileName) {
-    downloadBtn.disabled = false;
-    downloadBtn.classList.remove('bg-gray-200', 'text-gray-400', 'cursor-not-allowed');
-    downloadBtn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'cursor-pointer', 'shadow-md');
+function handleSuccess(srtText, sourceName) {
+    const cleanText = srtText.trim() + '\n\n';
+    srtPreview.textContent = cleanText;
+    fileStatus.textContent = "✅ Success";
+    setupDownload(cleanText, sourceName);
+    saveHistory(sourceName, cleanText); // Save to local storage
+    startRateLimitTimer(); // Trigger 60s cooldown
+}
 
+function handleError(error) {
+    srtPreview.textContent = `❌ Error: ${error.message}`;
+    fileStatus.textContent = "❌ Failed";
+    alert(`လုပ်ငန်းစဉ် မအောင်မြင်ပါ: ${error.message}`);
+}
+
+function setupDownload(srtText, originalName) {
+    downloadBtn.disabled = false;
+    downloadBtn.className = "mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 font-bold py-3.5 rounded-xl cursor-pointer transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2";
+    
     downloadBtn.onclick = () => {
         const blob = new Blob([srtText], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        let finalName = originalFileName.includes('.') ? originalFileName.substring(0, originalFileName.lastIndexOf('.')) : originalFileName;
-        a.download = finalName + "_subtitle.srt";
+        let finalName = originalName.includes('http') ? "Video_Subtitle" : originalName.split('.')[0];
+        a.download = finalName + ".srt";
         a.click();
         URL.revokeObjectURL(url);
     };
