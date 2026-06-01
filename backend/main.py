@@ -22,7 +22,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 def read_root():
     return {"message": "AI SRT Backend is running successfully!"}
 
-# 🔥 The Ultimate Multi-API Downloader Engine
+# 🔥 The Ultimate Multi-API Downloader Engine (Cobalt မပါဝင်တော့ပါ)
 async def fetch_media(url: str, output_path: str):
     # 1. TikTok လင့်ခ်များအတွက် (TikWM API)
     if "tiktok.com" in url:
@@ -35,31 +35,10 @@ async def fetch_media(url: str, output_path: str):
                         async with client.stream("GET", play_url) as r:
                             with open(output_path, "wb") as f:
                                 async for chunk in r.aiter_bytes(): f.write(chunk)
-                        return "video/mp4" # TikTok မှ ဗီဒီယိုအတိုင်း Gemini ဆီပို့မည်
+                        return "video/mp4" 
         except: pass
 
-    # 2. YouTube လင့်ခ်များအတွက် (Cobalt API - Spoofed Headers ဖြင့်)
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Origin": "https://cobalt.tools",
-        "Referer": "https://cobalt.tools/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    }
-    payload = {"url": url, "isAudioOnly": True, "aFormat": "mp3"}
-    
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            res = await client.post("https://api.cobalt.tools/", json=payload, headers=headers)
-            if res.status_code == 200 and res.json().get("url"):
-                dl_url = res.json()["url"]
-                async with client.stream("GET", dl_url) as r:
-                    with open(output_path, "wb") as f:
-                        async for chunk in r.aiter_bytes(): f.write(chunk)
-                return "audio/mp3"
-    except: pass
-
-    # 3. Cobalt ပိတ်နေပါက (Siputzx YTMP3 API) သို့ အလိုအလျောက် ပြောင်းလဲချိတ်ဆက်ခြင်း
+    # 2. YouTube လင့်ခ်များအတွက် (API 1 - Siputzx YTMP3)
     if "youtube.com" in url or "youtu.be" in url:
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -73,8 +52,24 @@ async def fetch_media(url: str, output_path: str):
                         return "audio/mp3"
         except: pass
 
+    # 3. YouTube လင့်ခ်များအတွက် (API 2 - Ryzendesu YTMP3 Fallback)
+    # အကယ်၍ အပေါ်က API 1 ပိတ်နေခဲ့လျှင် ဤ API ကို အလိုအလျောက် ပြောင်းသုံးမည်
+    if "youtube.com" in url or "youtu.be" in url:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                res = await client.get(f"https://api.ryzendesu.vip/api/downloader/ytmp3?url={url}")
+                if res.status_code == 200:
+                    dl_url = res.json().get("url")
+                    if dl_url:
+                        async with client.stream("GET", dl_url) as r:
+                            with open(output_path, "wb") as f:
+                                async for chunk in r.aiter_bytes(): f.write(chunk)
+                        return "audio/mp3"
+        except: pass
+
     # API အားလုံးမှ ပိတ်ပင်ခံရပါက
     return None
+
 
 @app.post("/process-url")
 async def process_url(url: str = Form(...), apiKey: str = Form(...), lang: str = Form(...)):
