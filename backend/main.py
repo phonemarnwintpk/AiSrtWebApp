@@ -22,54 +22,74 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 def read_root():
     return {"message": "AI SRT Backend is running successfully!"}
 
-# 🔥 The Ultimate Bypass Engine (Cobalt API ကို အသုံးပြုထားသည်)
-@app.post("/process-url")
-async def process_url(
-    url: str = Form(...), 
-    apiKey: str = Form(...), 
-    lang: str = Form(...)
-):
-    output_filename = os.path.join(UPLOAD_DIR, "downloaded_speech.mp3")
-    
-    # ကြားခံ Bypass API လိပ်စာ (YouTube/TikTok လုံခြုံရေးများကို ဤ API က ဖြတ်ကျော်ပေးမည်)
-    cobalt_api = "https://api.cobalt.tools/api/json"
+# 🔥 The Ultimate Multi-API Downloader Engine
+async def fetch_media(url: str, output_path: str):
+    # 1. TikTok လင့်ခ်များအတွက် (TikWM API)
+    if "tiktok.com" in url:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                res = await client.post("https://www.tikwm.com/api/", data={"url": url})
+                if res.status_code == 200:
+                    play_url = res.json().get("data", {}).get("play")
+                    if play_url:
+                        async with client.stream("GET", play_url) as r:
+                            with open(output_path, "wb") as f:
+                                async for chunk in r.aiter_bytes(): f.write(chunk)
+                        return "video/mp4" # TikTok မှ ဗီဒီယိုအတိုင်း Gemini ဆီပို့မည်
+        except: pass
+
+    # 2. YouTube လင့်ခ်များအတွက် (Cobalt API - Spoofed Headers ဖြင့်)
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "Origin": "https://cobalt.tools",
+        "Referer": "https://cobalt.tools/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     }
-    payload = {
-        "url": url,
-        "isAudioOnly": True, # အသံသီးသန့်သာ တောင်းယူမည်
-        "aFormat": "mp3"
-    }
-
+    payload = {"url": url, "isAudioOnly": True, "aFormat": "mp3"}
+    
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            # ၁။ Cobalt API ဆီမှ တိုက်ရိုက် MP3 ဒေါင်းလုဒ်လင့်ခ်ကို တောင်းယူခြင်း
-            cobalt_response = await client.post(cobalt_api, json=payload, headers=headers)
-            
-            if cobalt_response.status_code != 200:
-                raise Exception("Bypass Server မှ လင့်ခ်အား ဖြတ်ကျော်ခွင့် မပြုပါ။")
-                
-            cobalt_data = cobalt_response.json()
-            direct_url = cobalt_data.get("url")
-            
-            if not direct_url:
-                raise Exception("တိုက်ရိုက် အသံလင့်ခ်ကို ရှာမတွေ့ပါ။")
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            res = await client.post("https://api.cobalt.tools/", json=payload, headers=headers)
+            if res.status_code == 200 and res.json().get("url"):
+                dl_url = res.json()["url"]
+                async with client.stream("GET", dl_url) as r:
+                    with open(output_path, "wb") as f:
+                        async for chunk in r.aiter_bytes(): f.write(chunk)
+                return "audio/mp3"
+    except: pass
 
-            # ၂။ ရရှိလာသော တိုက်ရိုက်လင့်ခ်မှ အသံဖိုင်အား Server ထဲသို့ ဆွဲယူခြင်း
-            async with client.stream("GET", direct_url) as r:
-                if r.status_code != 200:
-                    raise Exception("အသံဖိုင်အား ဒေါင်းလုဒ်ဆွဲ၍ မရပါ။")
-                with open(output_filename, "wb") as f:
-                    async for chunk in r.aiter_bytes():
-                        f.write(chunk)
-                        
-        # ၃။ ဒေါင်းလုဒ်ဆွဲထားသော MP3 အား Gemini API ဆီသို့ ပို့ဆောင်ခြင်း
-        srt_result = await send_audio_to_gemini(output_filename, apiKey, lang)
+    # 3. Cobalt ပိတ်နေပါက (Siputzx YTMP3 API) သို့ အလိုအလျောက် ပြောင်းလဲချိတ်ဆက်ခြင်း
+    if "youtube.com" in url or "youtu.be" in url:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                res = await client.get(f"https://api.siputzx.my.id/api/d/ytmp3?url={url}")
+                if res.status_code == 200:
+                    dl_url = res.json().get("data", {}).get("dl")
+                    if dl_url:
+                        async with client.stream("GET", dl_url) as r:
+                            with open(output_path, "wb") as f:
+                                async for chunk in r.aiter_bytes(): f.write(chunk)
+                        return "audio/mp3"
+        except: pass
+
+    # API အားလုံးမှ ပိတ်ပင်ခံရပါက
+    return None
+
+@app.post("/process-url")
+async def process_url(url: str = Form(...), apiKey: str = Form(...), lang: str = Form(...)):
+    output_filename = os.path.join(UPLOAD_DIR, "downloaded_media")
+    
+    try:
+        # Multi-API ကို အသုံးပြု၍ အသံ သို့မဟုတ် ဗီဒီယို ဒေါင်းလုဒ်ဆွဲခြင်း
+        mime_type = await fetch_media(url, output_filename)
         
-        # ၄။ သန့်ရှင်းရေးလုပ်ခြင်း (Server ပေါ် နေရာမစားစေရန်)
+        if not mime_type or not os.path.exists(output_filename):
+            raise Exception("API အားလုံးမှ လင့်ခ်အား ဖြတ်ကျော်ခွင့် မပြုပါ သို့မဟုတ် လင့်ခ်မှားနေပါသည်။")
+
+        # ရရှိလာသော ဖိုင်အား Gemini ဆီသို့ ပို့ဆောင်ခြင်း
+        srt_result = await send_audio_to_gemini(output_filename, apiKey, lang, mime_type)
+        
         if os.path.exists(output_filename):
             os.remove(output_filename)
             
@@ -78,16 +98,15 @@ async def process_url(
     except Exception as e:
         if os.path.exists(output_filename):
             os.remove(output_filename)
-        raise HTTPException(status_code=500, detail=f"Bypass Engine Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Single File & Chunk Upload လမ်းကြောင်းများ (အရင်အတိုင်း ပြောင်းလဲမှုမရှိပါ)
 @app.post("/upload-single")
 async def upload_single(file: UploadFile = File(...), apiKey: str = Form(...), lang: str = Form(...)):
     file_path = os.path.join(UPLOAD_DIR, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    srt_result = await send_audio_to_gemini(file_path, apiKey, lang)
+    srt_result = await send_audio_to_gemini(file_path, apiKey, lang, "audio/mp3") # ပုံမှန် upload များအတွက် default
     if os.path.exists(file_path):
         os.remove(file_path)
     return {"status": "success", "srt_text": srt_result}
@@ -102,15 +121,14 @@ async def upload_chunk(chunk: UploadFile = File(...), fileName: str = Form(...),
         final_file_path = os.path.join(UPLOAD_DIR, fileName)
         os.rename(temp_file_path, final_file_path)
         
-        srt_result = await send_audio_to_gemini(final_file_path, apiKey, lang)
+        srt_result = await send_audio_to_gemini(final_file_path, apiKey, lang, "audio/mp3")
         if os.path.exists(final_file_path):
             os.remove(final_file_path)
         return {"status": "success", "srt_text": srt_result}
 
     return {"status": "partial", "message": f"Chunk {chunkIndex+1}/{totalChunks} received"}
 
-# Gemini ဆီသို့ ပို့ဆောင်ပေးမည့် Function အပိုင်း
-async def send_audio_to_gemini(file_path, api_key, lang_select):
+async def send_audio_to_gemini(file_path, api_key, lang_select, mime_type):
     language_prompt = 'Myanmar (Burmese)' if lang_select == 'my' else 'English'
     prompt_text = f"""You are an expert movie subtitle translator and localizer. Listen to the provided media file and generate a highly accurate SRT subtitle file translated to {language_prompt}. 
     CRITICAL RULES:
@@ -125,7 +143,7 @@ async def send_audio_to_gemini(file_path, api_key, lang_select):
     
     async with httpx.AsyncClient(timeout=300.0) as client:
         with open(file_path, "rb") as f:
-            upload_response = await client.post(upload_url, headers={"Content-Type": "audio/mp3"}, content=f.read())
+            upload_response = await client.post(upload_url, headers={"Content-Type": mime_type}, content=f.read())
         
         if upload_response.status_code != 200:
             raise Exception("Google API သို့ ဖိုင်တင်ခြင်း မအောင်မြင်ပါ။ API Key မှန်/မမှန် စစ်ဆေးပါ။")
@@ -146,7 +164,7 @@ async def send_audio_to_gemini(file_path, api_key, lang_select):
 
         gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
         request_body = {
-            "contents": [{"parts": [{"text": prompt_text}, {"file_data": {"mime_type": "audio/mp3", "file_uri": file_uri}}]}]
+            "contents": [{"parts": [{"text": prompt_text}, {"file_data": {"mime_type": mime_type, "file_uri": file_uri}}]}]
         }
         
         response = await client.post(gemini_url, json=request_body)
