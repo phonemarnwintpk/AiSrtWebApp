@@ -35,7 +35,7 @@ async def process_url(
     # ဤနေရာသည် Render တွင် FFmpeg ကို အတင်းခေါ်သုံးသည့် အဓိကအပိုင်းဖြစ်သည်
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     
-    ydl_opts = {
+        ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': output_filename,
         'ffmpeg_location': ffmpeg_path, 
@@ -44,9 +44,12 @@ async def process_url(
             'preferredcodec': 'mp3',
             'preferredquality': '128',
         }],
+        # 🔥 YouTube Bot Block ကို ကျော်ဖြတ်ရန် "Android Phone" အဖြစ် ရုပ်ဖျက်ခြင်း
+        'extractor_args': {'youtube': {'player_client': ['android']}},
         'quiet': True,
         'no_warnings': True
     }
+
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
