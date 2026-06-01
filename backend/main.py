@@ -5,7 +5,7 @@ import shutil
 import yt_dlp
 import httpx
 import asyncio
-import imageio_ffmpeg # FFmpeg အား Render တွင် အလုပ်လုပ်စေမည့် Library
+import imageio_ffmpeg 
 
 app = FastAPI()
 
@@ -31,11 +31,9 @@ async def process_url(
     lang: str = Form(...)
 ):
     output_filename = os.path.join(UPLOAD_DIR, "downloaded_speech")
-    
-    # ဤနေရာသည် Render တွင် FFmpeg ကို အတင်းခေါ်သုံးသည့် အဓိကအပိုင်းဖြစ်သည်
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     
-        ydl_opts = {
+    ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': output_filename,
         'ffmpeg_location': ffmpeg_path, 
@@ -44,12 +42,10 @@ async def process_url(
             'preferredcodec': 'mp3',
             'preferredquality': '128',
         }],
-        # 🔥 YouTube Bot Block ကို ကျော်ဖြတ်ရန် "Android Phone" အဖြစ် ရုပ်ဖျက်ခြင်း
         'extractor_args': {'youtube': {'player_client': ['android']}},
         'quiet': True,
         'no_warnings': True
     }
-
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -102,9 +98,7 @@ async def upload_chunk(chunk: UploadFile = File(...), fileName: str = Form(...),
 
 async def send_audio_to_gemini(file_path, api_key, lang_select):
     language_prompt = 'Myanmar (Burmese)' if lang_select == 'my' else 'English'
-    
     prompt_text = f"""You are an expert movie subtitle translator and localizer. Listen to the provided media file and generate a highly accurate SRT subtitle file translated to {language_prompt}. 
-    
     CRITICAL RULES:
     1. STRICT TIMESTAMP FORMAT: You MUST strictly use the standard SRT timestamp format: HH:MM:SS,mmm --> HH:MM:SS,mmm.
     2. SHORT SUBTITLE BLOCKS: Break the spoken text into short, readable subtitle blocks. Max 2 lines.
