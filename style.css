@@ -12,3 +12,25 @@
 .bg-gray-950::-webkit-scrollbar-thumb {
     background: #334155;
 }
+
+/* Tab View Panel System */
+.view-panel {
+    display: none;
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+.view-panel.active {
+    display: block;
+}
+
+/* Smooth Fade-in effect for views */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

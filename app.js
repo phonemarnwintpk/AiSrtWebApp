@@ -15,24 +15,33 @@ const downloadBtn = document.getElementById('downloadBtn');
 const historyList = document.getElementById('historyList');
 const emptyHistoryMsg = document.getElementById('emptyHistoryMsg');
 
-// --- Drawer UI Elements ---
-const historyOverlay = document.getElementById('historyOverlay');
-const historyDrawer = document.getElementById('historyDrawer');
-const toggleHistoryBtn = document.getElementById('toggleHistoryBtn');
-const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+// --- Tab View System Logic ---
+const tabStudio = document.getElementById('tabStudio');
+const tabHistory = document.getElementById('tabHistory');
+const studioView = document.getElementById('studio-view');
+const historyView = document.getElementById('history-view');
 
-// --- Drawer Animation Logic ---
-function toggleDrawer(isOpen) {
-    if (isOpen) {
-        historyOverlay.classList.remove('hidden');
-        setTimeout(() => historyOverlay.classList.remove('opacity-0'), 10);
-        historyDrawer.classList.remove('translate-x-full');
+function switchTab(tabName) {
+    if (tabName === 'studio') {
+        studioView.classList.add('active');
+        historyView.classList.remove('active');
+        
+        // Tab UI Active State
+        tabStudio.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
+        tabHistory.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
     } else {
-        historyOverlay.classList.add('opacity-0');
-        historyDrawer.classList.add('translate-x-full');
-        setTimeout(() => historyOverlay.classList.add('hidden'), 300);
+        studioView.classList.remove('active');
+        historyView.classList.add('active');
+        
+        // Tab UI Active State
+        tabHistory.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
+        tabStudio.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
     }
 }
+
+tabStudio.addEventListener('click', () => switchTab('studio'));
+tabHistory.addEventListener('click', () => switchTab('history'));
+
 
 toggleHistoryBtn.addEventListener('click', () => toggleDrawer(true));
 closeHistoryBtn.addEventListener('click', () => toggleDrawer(false));
@@ -140,8 +149,7 @@ function renderHistory() {
                 setupDownload(item.srt, item.title);
                 fileStatus.textContent = "Loaded from history";
                 fileStatus.classList.remove('hidden');
-                // History ထဲကစာကို နှိပ်လိုက်ရင် Drawer ကို အလိုလို ပြန်ပိတ်ပေးမည်
-                toggleDrawer(false);
+                switchTab('studio');
             };
             historyList.appendChild(div);
         });

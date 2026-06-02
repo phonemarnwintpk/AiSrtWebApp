@@ -10,52 +10,25 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased relative min-h-screen flex flex-col">
 
-    <div id="historyOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden transition-opacity duration-300 opacity-0"></div>
+    <div class="bg-gray-200/80 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner">
+    <button id="tabStudio" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i> Studio
+    </button>
+    <button id="tabHistory" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2">
+        <i class="fa-solid fa-clock-rotate-left text-orange-500"></i> History
+    </button>
+</div>
 
-    <div id="historyDrawer" class="fixed top-0 right-0 h-full w-full sm:w-80 bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h2 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                <i class="fa-solid fa-clock-rotate-left mr-2 text-blue-500"></i>History
-            </h2>
-            <div class="flex items-center gap-4">
-                <button id="clearHistoryBtn" class="text-xs text-red-500 hover:text-red-700 font-bold transition">Clear All</button>
-                <button id="closeHistoryBtn" class="text-gray-400 hover:text-gray-800 transition transform hover:rotate-90">
-                    <i class="fa-solid fa-xmark text-2xl"></i>
-                </button>
-            </div>
-        </div>
-        <div id="historyList" class="p-4 space-y-3 overflow-y-auto flex-1 bg-white">
-            <p class="text-sm text-gray-400 text-center mt-8 font-medium" id="emptyHistoryMsg">No translations yet.</p>
-        </div>
-    </div>
 
     <main class="flex-1 p-4 md:p-8 overflow-y-auto relative w-full">
+        <div id="studio-view" class="view-panel active">
         <div class="max-w-5xl mx-auto flex flex-wrap justify-between items-center mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">AI Subtitle Studio</h1>
                 <p class="text-gray-500 text-sm mt-1">Generate perfect SRTs powered by Gemini</p>
             </div>
             
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-                    <div class="relative w-10 h-10 flex items-center justify-center">
-                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                            <path class="text-gray-200" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <path id="timerCircle" class="text-blue-600 transition-all duration-1000 ease-linear" stroke-dasharray="100, 100" stroke-width="3" stroke-dashoffset="0" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        </svg>
-                        <span id="timerText" class="absolute text-xs font-bold text-gray-700">Rdy</span>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-xs font-bold text-gray-800">API Status</span>
-                        <span id="timerStatus" class="text-[10px] text-green-500 font-semibold">Available</span>
-                    </div>
-                </div>
-
-                <button id="toggleHistoryBtn" class="bg-white border border-gray-200 text-gray-700 shadow-sm hover:shadow hover:border-blue-300 hover:text-blue-600 px-4 py-2.5 rounded-full font-bold transition-all flex items-center gap-2 active:scale-95">
-                    <i class="fa-solid fa-bars-staggered"></i>
-                    <span class="text-sm hidden sm:inline">History</span>
-                </button>
-            </div>
+            
         </div>
 
         <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
