@@ -10,74 +10,101 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased relative min-h-screen flex flex-col">
 
-    <div class="bg-gray-200/80 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner">
-    <button id="tabStudio" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2">
-        <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i> Studio
-    </button>
-    <button id="tabHistory" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2">
-        <i class="fa-solid fa-clock-rotate-left text-orange-500"></i> History
-    </button>
-</div>
-
-
-    <main class="flex-1 p-4 md:p-8 overflow-y-auto relative w-full">
-        <div id="studio-view" class="view-panel active">
-        <div class="max-w-5xl mx-auto flex flex-wrap justify-between items-center mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">AI Subtitle Studio</h1>
-                <p class="text-gray-500 text-sm mt-1">Generate perfect SRTs powered by Gemini</p>
-            </div>
-            
-            
+    <header class="max-w-5xl w-full mx-auto p-4 md:p-8 flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">AI Subtitle Studio</h1>
+            <p class="text-gray-500 text-sm mt-1">Generate perfect SRTs powered by Gemini</p>
         </div>
 
-        <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="space-y-6">
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-bold text-gray-800"><i class="fa-solid fa-key text-orange-500 mr-2"></i>Gemini API Key</h3>
-                        <span id="keyStatusBadge" class="px-2 py-1 bg-red-100 text-red-600 text-[10px] rounded-full font-bold">Not Saved</span>
-                    </div>
-                    <input type="password" id="apiKey" class="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm outline-none transition" placeholder="Paste key (Saved locally)">
-                    <button id="saveKeyBtn" class="mt-3 w-full bg-gray-800 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-900 transition">Save Key to Browser</button>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
+                <div class="relative w-10 h-10 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path class="text-gray-200" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path id="timerCircle" class="text-blue-600 transition-all duration-1000 ease-linear" stroke-dasharray="100, 100" stroke-width="3" stroke-dashoffset="0" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <span id="timerText" class="absolute text-xs font-bold text-gray-700">Rdy</span>
                 </div>
-
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                    <select id="langSelect" class="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl text-sm font-bold text-gray-700 mb-4 outline-none">
-                        <option value="my">🇲🇲 Translated Myanmar SRT</option>
-                        <option value="en">🇺🇸 Original English SRT</option>
-                    </select>
-
-                    <h3 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-link text-pink-500 mr-2"></i>Video Link</h3>
-                    <div class="flex gap-2 mb-4">
-                        <input type="url" id="videoLink" class="flex-1 bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl text-sm outline-none" placeholder="YouTube/TikTok URL">
-                        <button id="processLinkBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 rounded-xl transition shadow-md">Go</button>
-                    </div>
-
-                    <div class="relative flex items-center justify-center w-full">
-                        <hr class="w-full border-gray-200"><span class="absolute bg-white px-3 text-xs text-gray-400 font-bold">OR</span>
-                    </div>
-
-                    <div id="dropZone" class="mt-4 border-2 border-dashed border-blue-200 rounded-2xl p-6 text-center cursor-pointer hover:bg-blue-50 transition bg-blue-50/30">
-                        <input type="file" id="fileInput" class="hidden" accept="video/*,audio/*">
-                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-400 mb-2"></i>
-                        <p class="text-sm font-bold text-blue-700">Upload Media File</p>
-                        <p class="text-xs text-gray-500 mt-1">MP4, MP3, WAV</p>
-                    </div>
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold text-gray-800">API Status</span>
+                    <span id="timerStatus" class="text-[10px] text-green-500 font-semibold">Available</span>
                 </div>
             </div>
 
-            <div class="bg-gray-900 rounded-3xl p-6 shadow-xl border border-gray-800 flex flex-col h-[500px]">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-white"><i class="fa-solid fa-terminal text-green-400 mr-2"></i>Live Preview</h3>
-                    <span id="fileStatus" class="text-xs text-blue-400 font-semibold bg-blue-900/30 px-2 py-1 rounded-md hidden">Processing...</span>
-                </div>
-                <div class="flex-1 bg-gray-950 rounded-2xl p-4 overflow-y-auto font-mono text-sm">
-                    <pre id="srtPreview" class="text-green-400 whitespace-pre-wrap leading-relaxed">Waiting for magic... ✨</pre>
-                </div>
-                <button id="downloadBtn" class="mt-4 w-full bg-gray-700 text-gray-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition flex items-center justify-center gap-2" disabled>
-                    <i class="fa-solid fa-download"></i> Download .srt File
+            <div class="bg-gray-200/80 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner">
+                <button id="tabStudio" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i> Studio
                 </button>
+                <button id="tabHistory" class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-orange-500"></i> History
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto relative w-full pt-0">
+        
+        <div id="studio-view" class="view-panel active">
+            <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-key text-orange-500 mr-2"></i>Gemini API Key</h3>
+                            <span id="keyStatusBadge" class="px-2 py-1 bg-red-100 text-red-600 text-[10px] rounded-full font-bold">Not Saved</span>
+                        </div>
+                        <input type="password" id="apiKey" class="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm outline-none transition" placeholder="Paste key (Saved locally)">
+                        <button id="saveKeyBtn" class="mt-3 w-full bg-gray-800 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-900 transition">Save Key to Browser</button>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                        <select id="langSelect" class="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl text-sm font-bold text-gray-700 mb-4 outline-none">
+                            <option value="my">🇲🇲 Translated Myanmar SRT</option>
+                            <option value="en">🇺🇸 Original English SRT</option>
+                        </select>
+
+                        <h3 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-link text-pink-500 mr-2"></i>Video Link</h3>
+                        <div class="flex gap-2 mb-4">
+                            <input type="url" id="videoLink" class="flex-1 bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl text-sm outline-none" placeholder="YouTube/TikTok URL">
+                            <button id="processLinkBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 rounded-xl transition shadow-md">Go</button>
+                        </div>
+
+                        <div class="relative flex items-center justify-center w-full">
+                            <hr class="w-full border-gray-200"><span class="absolute bg-white px-3 text-xs text-gray-400 font-bold">OR</span>
+                        </div>
+
+                        <div id="dropZone" class="mt-4 border-2 border-dashed border-blue-200 rounded-2xl p-6 text-center cursor-pointer hover:bg-blue-50 transition bg-blue-50/30">
+                            <input type="file" id="fileInput" class="hidden" accept="video/*,audio/*">
+                            <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-400 mb-2"></i>
+                            <p class="text-sm font-bold text-blue-700">Upload Media File</p>
+                            <p class="text-xs text-gray-500 mt-1">MP4, MP3, WAV</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 rounded-3xl p-6 shadow-xl border border-gray-800 flex flex-col h-[500px]">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-white"><i class="fa-solid fa-terminal text-green-400 mr-2"></i>Live Preview</h3>
+                        <span id="fileStatus" class="text-xs text-blue-400 font-semibold bg-blue-900/30 px-2 py-1 rounded-md hidden">Processing...</span>
+                    </div>
+                    <div class="flex-1 bg-gray-950 rounded-2xl p-4 overflow-y-auto font-mono text-sm">
+                        <pre id="srtPreview" class="text-green-400 whitespace-pre-wrap leading-relaxed">Waiting for magic... ✨</pre>
+                    </div>
+                    <button id="downloadBtn" class="mt-4 w-full bg-gray-700 text-gray-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition flex items-center justify-center gap-2" disabled>
+                        <i class="fa-solid fa-download"></i> Download .srt File
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="history-view" class="view-panel max-w-5xl mx-auto">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 min-h-[500px]">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                    <h2 class="text-2xl font-extrabold text-gray-800">My Saved Translations</h2>
+                    <button id="clearHistoryBtn" class="text-sm bg-red-50 text-red-600 px-4 py-2 rounded-xl hover:bg-red-100 font-bold transition">Clear All</button>
+                </div>
+                <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <p class="text-sm text-gray-400 text-center mt-10 col-span-full font-medium" id="emptyHistoryMsg">No translations yet.</p>
+                </div>
             </div>
         </div>
     </main>
