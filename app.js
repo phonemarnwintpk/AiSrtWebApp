@@ -1,4 +1,4 @@
-// ⚠️ သင်၏ Hugging Face Space URL ကို ဤနေရာတွင် ထည့်ပါ
+// ⚠️ သင်၏ Hugging Face Space URL
 const BACKEND_URL = "https://marnlaypk-aisrtwebappbackend.hf.space";
 
 // UI Elements
@@ -41,7 +41,6 @@ function switchTab(tabName) {
 
 tabStudio.addEventListener('click', () => switchTab('studio'));
 tabHistory.addEventListener('click', () => switchTab('history'));
-
 
 // --- 1. API KEY PERSISTENCE ---
 function loadApiKey() {
@@ -162,7 +161,6 @@ renderHistory();
 
 // --- 4. MAIN PROCESSING LOGIC ---
 const getApiKey = () => localStorage.getItem('geminiApiKey') || "";
-
 processLinkBtn.addEventListener('click', async () => {
     const url = videoLinkInput.value.trim();
     if (!url) return alert("⚠️ Link ထည့်ပါ။");
