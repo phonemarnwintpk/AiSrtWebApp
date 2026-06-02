@@ -43,10 +43,6 @@ tabStudio.addEventListener('click', () => switchTab('studio'));
 tabHistory.addEventListener('click', () => switchTab('history'));
 
 
-toggleHistoryBtn.addEventListener('click', () => toggleDrawer(true));
-closeHistoryBtn.addEventListener('click', () => toggleDrawer(false));
-historyOverlay.addEventListener('click', () => toggleDrawer(false));
-
 // --- 1. API KEY PERSISTENCE ---
 function loadApiKey() {
     const savedKey = localStorage.getItem('geminiApiKey');
