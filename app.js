@@ -1,4 +1,4 @@
-// ⚠️ သင်၏ Hugging Face Space URL ကို ဤနေရာတွင် ထည့်ပါ (အနောက်တွင် / မပါစေရ)
+// ⚠️ သင်၏ Hugging Face Space URL ကို ဤနေရာတွင် ထည့်ပါ
 const BACKEND_URL = "https://marnlaypk-aisrtwebappbackend.hf.space";
 
 // UI Elements
@@ -15,7 +15,30 @@ const downloadBtn = document.getElementById('downloadBtn');
 const historyList = document.getElementById('historyList');
 const emptyHistoryMsg = document.getElementById('emptyHistoryMsg');
 
-// --- 1. API KEY PERSISTENCE (LocalStorage) ---
+// --- Drawer UI Elements ---
+const historyOverlay = document.getElementById('historyOverlay');
+const historyDrawer = document.getElementById('historyDrawer');
+const toggleHistoryBtn = document.getElementById('toggleHistoryBtn');
+const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+
+// --- Drawer Animation Logic ---
+function toggleDrawer(isOpen) {
+    if (isOpen) {
+        historyOverlay.classList.remove('hidden');
+        setTimeout(() => historyOverlay.classList.remove('opacity-0'), 10);
+        historyDrawer.classList.remove('translate-x-full');
+    } else {
+        historyOverlay.classList.add('opacity-0');
+        historyDrawer.classList.add('translate-x-full');
+        setTimeout(() => historyOverlay.classList.add('hidden'), 300);
+    }
+}
+
+toggleHistoryBtn.addEventListener('click', () => toggleDrawer(true));
+closeHistoryBtn.addEventListener('click', () => toggleDrawer(false));
+historyOverlay.addEventListener('click', () => toggleDrawer(false));
+
+// --- 1. API KEY PERSISTENCE ---
 function loadApiKey() {
     const savedKey = localStorage.getItem('geminiApiKey');
     if (savedKey) {
@@ -38,9 +61,9 @@ saveKeyBtn.addEventListener('click', () => {
         keyStatusBadge.className = "px-2 py-1 bg-red-100 text-red-600 text-[10px] rounded-full font-bold";
     }
 });
-loadApiKey(); // On Page Load
+loadApiKey();
 
-// --- 2. ADVANCED RATE LIMIT TIMER (Persists across reload) ---
+// --- 2. ADVANCED RATE LIMIT TIMER ---
 const COOLDOWN_SECONDS = 60;
 let timerInterval;
 
@@ -80,9 +103,9 @@ function updateTimerUI() {
         }
     }, 1000);
 }
-updateTimerUI(); // Check on Page Load
+updateTimerUI();
 
-// --- 3. TRANSLATION HISTORY (LocalStorage) ---
+// --- 3. TRANSLATION HISTORY ---
 function saveHistory(title, srtContent) {
     let history = JSON.parse(localStorage.getItem('srtHistory')) || [];
     const newItem = {
@@ -91,8 +114,8 @@ function saveHistory(title, srtContent) {
         date: new Date().toLocaleString(),
         srt: srtContent
     };
-    history.unshift(newItem); // Add to top
-    if (history.length > 15) history.pop(); // Keep only last 15
+    history.unshift(newItem);
+    if (history.length > 15) history.pop();
     localStorage.setItem('srtHistory', JSON.stringify(history));
     renderHistory();
 }
@@ -112,12 +135,13 @@ function renderHistory() {
                 <h4 class="text-sm font-bold text-gray-800 group-hover:text-blue-600 truncate">${item.title}</h4>
                 <p class="text-[10px] text-gray-400 mt-1">${item.date}</p>
             `;
-            // Click history item to load SRT to preview
             div.onclick = () => {
                 srtPreview.textContent = item.srt;
                 setupDownload(item.srt, item.title);
                 fileStatus.textContent = "Loaded from history";
                 fileStatus.classList.remove('hidden');
+                // History ထဲကစာကို နှိပ်လိုက်ရင် Drawer ကို အလိုလို ပြန်ပိတ်ပေးမည်
+                toggleDrawer(false);
             };
             historyList.appendChild(div);
         });
@@ -130,10 +154,10 @@ document.getElementById('clearHistoryBtn').onclick = () => {
         renderHistory();
     }
 };
-renderHistory(); // On Page Load
+renderHistory();
 
 // --- 4. MAIN PROCESSING LOGIC ---
-const getApiKey = () => localStorage.getItem('geminiApiKey') || ""; // Fallback allowed
+const getApiKey = () => localStorage.getItem('geminiApiKey') || "";
 
 processLinkBtn.addEventListener('click', async () => {
     const url = videoLinkInput.value.trim();
@@ -205,8 +229,8 @@ function handleSuccess(srtText, sourceName) {
     srtPreview.textContent = cleanText;
     fileStatus.textContent = "✅ Success";
     setupDownload(cleanText, sourceName);
-    saveHistory(sourceName, cleanText); // Save to local storage
-    startRateLimitTimer(); // Trigger 60s cooldown
+    saveHistory(sourceName, cleanText);
+    startRateLimitTimer();
 }
 
 function handleError(error) {
