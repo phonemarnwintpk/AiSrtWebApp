@@ -15,6 +15,77 @@ const downloadBtn = document.getElementById('downloadBtn');
 const historyList = document.getElementById('historyList');
 const emptyHistoryMsg = document.getElementById('emptyHistoryMsg');
 
+// --- UI Localization System (EN/MM Switcher) ---
+const langEnBtn = document.getElementById('langEnBtn');
+const langMyBtn = document.getElementById('langMyBtn');
+let currentUiLang = localStorage.getItem('uiLang') || 'en';
+
+// UI စာသားများကို ဘာသာစကားအလိုက် ခွဲခြားသိမ်းဆည်းထားခြင်း
+const uiDictionary = {
+    en: {
+        title: "AI Subtitle Studio",
+        subtitle: "Generate perfect SRTs powered by Gemini",
+        apiKeyPlaceholder: "Paste key (Saved locally)",
+        saveKeyBtn: "Save Key to Browser",
+        processLinkBtn: "Go",
+        uploadTitle: "Upload Media File",
+        uploadSub: "MP4, MP3, WAV",
+        downloadBtn: `<i class="fa-solid fa-download"></i> Download .srt File`
+    },
+    my: {
+        title: "AI စာတန်းထိုး စတူဒီယို",
+        subtitle: "Gemini အသုံးပြု၍ တိကျသော SRT များကို ဖန်တီးပါ",
+        apiKeyPlaceholder: "ကီး ထည့်ပါ (Browser တွင် သိမ်းမည်)",
+        saveKeyBtn: "Browser သို့ သိမ်းမည်",
+        processLinkBtn: "သွားမည်",
+        uploadTitle: "ဖိုင် တင်ရန်",
+        uploadSub: "MP4, MP3, သို့ WAV",
+        downloadBtn: `<i class="fa-solid fa-download"></i> SRT ဖိုင် ဒေါင်းလုဒ်ဆွဲမည်`
+    }
+};
+
+// UI များကို ချက်ချင်း ပြောင်းလဲပေးမည့် Function
+function setUiLanguage(lang) {
+    currentUiLang = lang;
+    localStorage.setItem('uiLang', lang);
+
+    // ခလုတ်ဒီဇိုင်း အပြောင်းအလဲ
+    if(lang === 'en') {
+        langEnBtn.classList.add('lang-active');
+        langEnBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
+        langMyBtn.classList.remove('lang-active');
+        langMyBtn.classList.add('text-gray-500', 'hover:text-gray-700');
+    } else {
+        langMyBtn.classList.add('lang-active');
+        langMyBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
+        langEnBtn.classList.remove('lang-active');
+        langEnBtn.classList.add('text-gray-500', 'hover:text-gray-700');
+    }
+
+    // HTML စာသားများကို အစားထိုးခြင်း
+    const dict = uiDictionary[lang];
+    document.querySelector('h1.text-3xl').textContent = dict.title;
+    document.querySelector('p.text-gray-500.text-sm').textContent = dict.subtitle;
+    document.getElementById('apiKey').placeholder = dict.apiKeyPlaceholder;
+    document.getElementById('saveKeyBtn').textContent = dict.saveKeyBtn;
+    document.getElementById('processLinkBtn').textContent = dict.processLinkBtn;
+    document.querySelector('#dropZone p.text-blue-700').textContent = dict.uploadTitle;
+    document.querySelector('#dropZone p.text-gray-500').textContent = dict.uploadSub;
+    
+    // ဒေါင်းလုဒ်ခလုတ်က Disabled မဖြစ်နေမှသာ စာသားပြောင်းမည်
+    if (!downloadBtn.disabled) {
+        downloadBtn.innerHTML = dict.downloadBtn;
+    }
+}
+
+// ခလုတ်နှိပ်လျှင် ဘာသာစကားပြောင်းရန်
+langEnBtn.addEventListener('click', () => setUiLanguage('en'));
+langMyBtn.addEventListener('click', () => setUiLanguage('my'));
+
+// Web ဖွင့်ဖွင့်ချင်း သိမ်းထားသော ဘာသာစကားကို ခေါ်သုံးရန်
+setUiLanguage(currentUiLang);
+
+
 // --- Tab View System Logic ---
 const tabStudio = document.getElementById('tabStudio');
 const tabHistory = document.getElementById('tabHistory');
