@@ -218,17 +218,96 @@ fileInput.addEventListener('change', async () => {
 });
 
 // UI Helper Functions
+// UI Helper Functions & Terminal Progress Engine
+let terminalInterval;
+let terminalLogs = [];
+
+// Phase အလိုက် ဘာသာစကားခွဲခြားထားသော သတ်မှတ်ချက်များ (Dictionary)
+const logDict = {
+    my: [
+        "🚀 လုပ်ငန်းစဉ် စတင်နေပါပြီ... ဗီဒီယိုလင့်ခ်ကို စစ်ဆေးနေသည်။",
+        "🔄 API က နောက်ကွယ်တွင် အသံဖိုင် ပြုလုပ်နေပါသည်။ (စက္ကန့် ၂၀ မှ ၃၀၀ ကြား ကြာနိုင်ပါသည်...)",
+        "🎵 အသံဖိုင် အဆင်သင့်ဖြစ်ပါပြီ။ ဆာဗာထဲသို့ စတင်ဒေါင်းလုဒ်ဆွဲနေသည်...",
+        "✨ ဖိုင်ကို Gemini AI ဆီ ပို့လိုက်ပါပြီ။ မြန်မာစာတန်းထိုး စတင်ဖန်တီးနေသည်..."
+    ],
+    en: [
+        "📡 [SYSTEM] Fetching media metadata from source...",
+        "🔄 Converting video to MP3 on remote server... (Takes 20 to 300 seconds)",
+        "💾 [SERVER] Streaming converted audio chunks into local directory...",
+        "🧠 Audio transferred to Google Gemini File API. Activating AI Transcriber..."
+    ]
+};
+
+//  Terminal Progress Bar ဖန်တီးပေးသည့် Function
+function renderProgressBar(percent) {
+    const totalBars = 25; // Bar ၏ အရှည်
+    const filledBars = Math.round((percent / 100) * totalBars);
+    const emptyBars = totalBars - filledBars;
+    const barStr = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
+    return `\n[${barStr}] ${percent}%`;
+}
+
 function startUiProcessing(msg) {
-    srtPreview.textContent = `⏳ ${msg}\nBackend Server တွင် အလုပ်လုပ်နေပါသည်...`;
+    // ယခင် Interval များကို ရှင်းလင်းခြင်း
+    clearInterval(terminalInterval);
+    terminalLogs = [];
+    
+    // ယူဆာ ရွေးချယ်ထားသော ဘာသာစကားကို ရှာဖွေခြင်း
+    const lang = document.getElementById('langSelect').value;
+    const dict = (lang === 'my') ? logDict.my : logDict.en;
+
+    let currentPhase = 0;
+    let percent = 0;
+    
+    // UI Status များ ပြင်ဆင်ခြင်း
     fileStatus.textContent = "Processing...";
     fileStatus.classList.remove('hidden');
     downloadBtn.disabled = true;
     downloadBtn.className = "mt-4 w-full bg-gray-700 text-gray-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition flex items-center justify-center gap-2";
+
+    // Phase 1 စတင်ခြင်း
+    terminalLogs.push(dict[0]);
+    currentPhase = 1;
+
+    // Terminal Progress Simulation (Smart Polling System)
+    terminalInterval = setInterval(() => {
+        if (percent < 99) {
+            // Backend မှ Response မလာမချင်း 99% အထိသာ ရမ်းသမ်း၍ (Random) တက်မည်
+            percent += Math.floor(Math.random() * 2) + 1; 
+            if (percent > 99) percent = 99;
+        }
+
+        // ရာခိုင်နှုန်းအလိုက် Phase စာသားအသစ်များကို အောက်မှ ဆက်တိုက်ပေါင်းထည့်ခြင်း (Append)
+        if (percent > 20 && currentPhase === 1) {
+            terminalLogs.push(dict[1]);
+            currentPhase = 2;
+        } else if (percent > 55 && currentPhase === 2) {
+            terminalLogs.push(dict[2]);
+            currentPhase = 3;
+        } else if (percent > 85 && currentPhase === 3) {
+            terminalLogs.push(dict[3]);
+            currentPhase = 4;
+        }
+
+        // စာသားများကို Terminal ပုံစံဖြင့် Preview Box တွင် Render လုပ်ခြင်း
+        srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(percent);
+    }, 1200); // 1.2 စက္ကန့်လျှင် တစ်ခါ Update ဖြစ်မည်
 }
 
 function handleSuccess(srtText, sourceName) {
+    // Interval ကို ရပ်တန့်ခြင်း
+    clearInterval(terminalInterval);
+    
+    const lang = document.getElementById('langSelect').value;
+    const successMsg = (lang === 'my') 
+        ? "✅ စာတန်းထိုး ထွက်ပေါ်လာပါပြီ။ အောက်တွင် အစအဆုံး စမ်းသပ်ကြည့်ရှုနိုင်ပါသည်။" 
+        : "🎉 Subtitles generated successfully! SRT compilation complete.";
+
     const cleanText = srtText.trim() + '\n\n';
-    srtPreview.textContent = cleanText;
+    
+    // 100% ပြည့်သွားကြောင်းနှင့် Phase 5 အား ထပ်ပေါင်းထည့်ကာ SRT စာသားကို ချပြခြင်း
+    srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(100) + '\n\n' + successMsg + '\n\n----------------------------------------------------\n\n' + cleanText;
+    
     fileStatus.textContent = "✅ Success";
     setupDownload(cleanText, sourceName);
     saveHistory(sourceName, cleanText);
@@ -236,10 +315,13 @@ function handleSuccess(srtText, sourceName) {
 }
 
 function handleError(error) {
-    srtPreview.textContent = `❌ Error: ${error.message}`;
+    clearInterval(terminalInterval);
+    // Error တက်ပါက ယခင် Log များအောက်တွင် SYSTEM ERROR ဟု ရေးပြမည်
+    srtPreview.textContent = terminalLogs.join('\n\n') + `\n\n❌ [SYSTEM ERROR]: ${error.message}`;
     fileStatus.textContent = "❌ Failed";
     alert(`လုပ်ငန်းစဉ် မအောင်မြင်ပါ: ${error.message}`);
 }
+
 
 function setupDownload(srtText, originalName) {
     downloadBtn.disabled = false;
