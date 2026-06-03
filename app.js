@@ -140,26 +140,63 @@ function loadApiKey() {
     }
 }
 
-saveKeyBtn.addEventListener('click', () => {
+const ADMIN_PASSWORD = "MarnWin_Dev_2026_Studio"; // 👑 Admin Secret Text
+
+saveKeyBtn.addEventListener('click', async () => {
     const key = apiKeyInput.value.trim();
-    if (key) {
-        localStorage.setItem('geminiApiKey', key);
-        keyStatusBadge.textContent = "Saved";
-        keyStatusBadge.className = "px-2 py-1 bg-green-100 text-green-600 text-[10px] rounded-full font-bold";
-        alert("✅ API Key သိမ်းဆည်းပြီးပါပြီ။");
-    } else {
+    
+    if (!key) {
         localStorage.removeItem('geminiApiKey');
         keyStatusBadge.textContent = "Not Saved";
         keyStatusBadge.className = "px-2 py-1 bg-red-100 text-red-600 text-[10px] rounded-full font-bold";
+        return;
+    }
+
+    // 🛡️ Phase A: Frontend Format Check
+    if (key !== ADMIN_PASSWORD) {
+        // AIzaSy ဖြင့်စတင်ပြီး စုစုပေါင်း စာလုံးရေ ၃၉ လုံးဝန်းကျင်ရှိရမည့် Regex Check
+        const geminiKeyRegex = /^AIzaSy[A-Za-z0-9_\-]{33}$/;
+        if (!geminiKeyRegex.test(key)) {
+            alert("❌ မှားယွင်းသော Gemini API Key ပုံစံ ဖြစ်နေပါသည်");
+            return;
+        }
+    }
+
+    // 🛡️ Phase B: Backend Live Ping Validation
+    saveKeyBtn.textContent = "Validating...";
+    saveKeyBtn.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append("apiKey", key);
+        
+        const res = await fetch(`${BACKEND_URL}/validate-key`, { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (data.valid) {
+            localStorage.setItem('geminiApiKey', key);
+            keyStatusBadge.textContent = "Saved";
+            keyStatusBadge.className = "px-2 py-1 bg-green-100 text-green-600 text-[10px] rounded-full font-bold";
+            alert(key === ADMIN_PASSWORD ? "👑 Admin Mode ပွင့်သွားပါပြီ။" : "✅ API Key မှန်ကန်ပြီး အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ။");
+            checkLimits(); // UI Status ကို ချက်ချင်း Update လုပ်ရန်
+        } else {
+            alert("❌ ဤ API Key သည် သက်တမ်းကုန်ဆုံးနေပါသည် သို့မဟုတ် အသုံးမပြုနိုင်ပါ။");
+        }
+    } catch (error) {
+        alert("⚠️ ဆာဗာနှင့် ချိတ်ဆက်ရာတွင် အခက်အခဲရှိနေပါသည်။");
+    } finally {
+        saveKeyBtn.textContent = "Save Key";
+        saveKeyBtn.disabled = false;
     }
 });
+
 loadApiKey();
 
 
 // --- 2. ADVANCED RATE LIMIT & COOLDOWN TIMER ---
 const COOLDOWN_SECONDS = 180;
 const HOURLY_LIMIT = 3;
-const ADMIN_SECRET = "DEV_MODE_STU"; // 👑 သင်၏ Admin Key (Gemini Key) ကို ဤနေရာတွင် ထည့်ပါ
+const ADMIN_PASSWORD = "MarnWin_Dev_2026_Studio"; // 👑 သင်၏ Admin Key (Gemini Key) ကို ဤနေရာတွင် ထည့်ပါ
 
 let timerInterval;
 
@@ -174,7 +211,7 @@ function checkLimits() {
     if (!apiStatusText || !apiSubText || !ownApiStatusBlock) return;
 
     // 👑 Admin Bypass Logic
-    if (currentKey === ADMIN_SECRET) {
+    if (currentKey === ADMIN_PASSWORD) {
         apiStatusText.textContent = "● Own API (Admin Mode)";
         apiStatusText.className = "font-bold text-blue-600";
         apiSubText.textContent = "Unlimited Access";
@@ -297,10 +334,11 @@ processLinkBtn.addEventListener('click', async () => {
     const url = videoLinkInput.value.trim();
     if (!url) return alert("⚠️ Link ထည့်ပါ။");
     
-    const currentKey = getApiKey();
-    if (currentKey !== ADMIN_SECRET && localStorage.getItem('rateLimitEnd') > Date.now()) {
-    return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
-}
+        const currentKey = getApiKey();
+    if (currentKey !== ADMIN_PASSWORD && localStorage.getItem('rateLimitEnd') > Date.now()) {
+        return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
+    }
+
 
 
     startUiProcessing("Link မှတစ်ဆင့် လုပ်ငန်းစဉ် စတင်နေပါသည်...");
@@ -327,10 +365,11 @@ fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
 
-    const currentKey = getApiKey();
-    if (currentKey !== ADMIN_SECRET && localStorage.getItem('rateLimitEnd') > Date.now()) {
-    return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
-}
+        const currentKey = getApiKey();
+    if (currentKey !== ADMIN_PASSWORD && localStorage.getItem('rateLimitEnd') > Date.now()) {
+        return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
+    }
+
 
 
     startUiProcessing(`Uploading ${file.name}...`);
