@@ -159,10 +159,31 @@ loadApiKey();
 // --- 2. ADVANCED RATE LIMIT & COOLDOWN TIMER ---
 const COOLDOWN_SECONDS = 180;
 const HOURLY_LIMIT = 3;
+const ADMIN_SECRET = "DEV_MODE_STU"; // 👑 သင်၏ Admin Key (Gemini Key) ကို ဤနေရာတွင် ထည့်ပါ
+
 let timerInterval;
 
-// 🪲 (BUG FIXED: HTML Elements များကို မဖျက်စီးတော့ပါ)
+// 🪲 (BUG FIXED: HTML Elements များကို မဖျက်စီးတော့ပါ + Admin Bypass ပါဝင်သည်)
 function checkLimits() {
+    const currentKey = localStorage.getItem('geminiApiKey') || "";
+    const apiStatusText = document.getElementById('apiStatusText');
+    const apiSubText = document.getElementById('apiSubText');
+    const ownApiStatusBlock = document.getElementById('ownApiStatusBlock');
+    const btnGo = document.getElementById('processLinkBtn');
+
+    if (!apiStatusText || !apiSubText || !ownApiStatusBlock) return;
+
+    // 👑 Admin Bypass Logic
+    if (currentKey === ADMIN_SECRET) {
+        apiStatusText.textContent = "● Own API (Admin Mode)";
+        apiStatusText.className = "font-bold text-blue-600";
+        apiSubText.textContent = "Unlimited Access";
+        ownApiStatusBlock.className = "px-3 py-2 bg-blue-50 border-r border-blue-100 flex flex-col justify-center min-w-[140px] transition-colors";
+        if(btnGo) btnGo.disabled = false;
+        return; // Normal Limit Check များကို ကျော်သွားမည်
+    }
+
+    // Normal User Logic
     let taskHistory = JSON.parse(localStorage.getItem('taskHistory')) || [];
     const oneHourAgo = Date.now() - (60 * 60 * 1000);
     taskHistory = taskHistory.filter(time => time > oneHourAgo);
@@ -170,16 +191,8 @@ function checkLimits() {
 
     const endTime = localStorage.getItem('rateLimitEnd');
     const remaining = endTime ? Math.max(0, Math.ceil((endTime - Date.now()) / 1000)) : 0;
-    
     const isCooldown = remaining > 0;
     const isLimitReached = taskHistory.length >= HOURLY_LIMIT;
-
-    const apiStatusText = document.getElementById('apiStatusText');
-    const apiSubText = document.getElementById('apiSubText');
-    const ownApiStatusBlock = document.getElementById('ownApiStatusBlock');
-    const btnGo = document.getElementById('processLinkBtn');
-
-    if (!apiStatusText || !apiSubText || !ownApiStatusBlock) return;
 
     if (isLimitReached && !isCooldown) {
         apiStatusText.textContent = "🚫 Own API (Limit Reached)";
@@ -198,11 +211,12 @@ function checkLimits() {
     } else {
         apiStatusText.textContent = "● Own API (Ready)";
         apiStatusText.className = "font-bold text-green-600";
-        apiSubText.textContent = `Free Limit: ${taskHistory.length}/3 tasks per hour`;
+        apiSubText.textContent = `Free Limit: ${taskHistory.length}/3 tasks`;
         ownApiStatusBlock.className = "px-3 py-2 bg-green-50 border-r border-green-100 flex flex-col justify-center min-w-[140px] transition-colors";
         if(btnGo) btnGo.disabled = false;
     }
 }
+
 
 function startRateLimitTimer() {
     let taskHistory = JSON.parse(localStorage.getItem('taskHistory')) || [];
@@ -283,9 +297,11 @@ processLinkBtn.addEventListener('click', async () => {
     const url = videoLinkInput.value.trim();
     if (!url) return alert("⚠️ Link ထည့်ပါ။");
     
-    if (localStorage.getItem('rateLimitEnd') > Date.now()) {
-        return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
-    }
+    const currentKey = getApiKey();
+    if (currentKey !== ADMIN_SECRET && localStorage.getItem('rateLimitEnd') > Date.now()) {
+    return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
+}
+
 
     startUiProcessing("Link မှတစ်ဆင့် လုပ်ငန်းစဉ် စတင်နေပါသည်...");
     const lang = document.getElementById('langSelect').value;
@@ -311,9 +327,11 @@ fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
 
-    if (localStorage.getItem('rateLimitEnd') > Date.now()) {
-        return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
-    }
+    const currentKey = getApiKey();
+    if (currentKey !== ADMIN_SECRET && localStorage.getItem('rateLimitEnd') > Date.now()) {
+    return alert("⚠️ Rate Limit စောင့်ဆိုင်းနေပါသည်။ ခေတ္တစောင့်ပါ။");
+}
+
 
     startUiProcessing(`Uploading ${file.name}...`);
     const lang = document.getElementById('langSelect').value;
