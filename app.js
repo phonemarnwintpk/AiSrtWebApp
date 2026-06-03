@@ -145,9 +145,6 @@ function loadApiKey() {
     }
 }
 
-
-const ADMIN_PASSWORD = "MarnWin_Dev_2026_Studio"; // 👑 Admin Secret Text
-
 saveKeyBtn.addEventListener('click', async () => {
     const key = apiKeyInput.value.trim();
     
