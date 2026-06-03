@@ -131,14 +131,20 @@ if(tabStudio && tabHistory) {
 
 
 // --- 1. API KEY PERSISTENCE ---
+const ADMIN_PASSWORD = "MarnWin_Dev_2026_Studio"; // 👑 Admin Secret Text
+
 function loadApiKey() {
     const savedKey = localStorage.getItem('geminiApiKey');
     if (savedKey) {
         apiKeyInput.value = savedKey;
         keyStatusBadge.textContent = "Saved";
         keyStatusBadge.className = "px-2 py-1 bg-green-100 text-green-600 text-[10px] rounded-full font-bold";
+        
+        // UI အခြေအနေကို ချက်ချင်းစစ်ဆေးရန်
+        setTimeout(() => { if (typeof checkLimits === 'function') checkLimits(); }, 100);
     }
 }
+
 
 const ADMIN_PASSWORD = "MarnWin_Dev_2026_Studio"; // 👑 Admin Secret Text
 
@@ -196,7 +202,6 @@ loadApiKey();
 // --- 2. ADVANCED RATE LIMIT & COOLDOWN TIMER ---
 const COOLDOWN_SECONDS = 180;
 const HOURLY_LIMIT = 3;
-const ADMIN_PASSWORD = "MarnWin_Dev_2026_Studio"; // 👑 သင်၏ Admin Key (Gemini Key) ကို ဤနေရာတွင် ထည့်ပါ
 
 let timerInterval;
 
