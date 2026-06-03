@@ -20,13 +20,17 @@ const langEnBtn = document.getElementById('langEnBtn');
 const langMyBtn = document.getElementById('langMyBtn');
 let currentUiLang = localStorage.getItem('uiLang') || 'en';
 
+// Global Terminal States
+let activePhaseIndex = -1;
+let currentTerminalPercent = 0;
+
 // UI စာသားများကို ဘာသာစကားအလိုက် ခွဲခြားသိမ်းဆည်းထားခြင်း
 const uiDictionary = {
     en: {
         title: "AI Subtitle Studio",
         subtitle: "Generate perfect SRTs powered by Gemini",
         apiKeyPlaceholder: "Paste key (Saved locally)",
-        saveKeyBtn: "Save Key to Browser",
+        saveKeyBtn: "Save Key",
         processLinkBtn: "Go",
         uploadTitle: "Upload Media File",
         uploadSub: "MP4, MP3, WAV",
@@ -36,7 +40,7 @@ const uiDictionary = {
         title: "AI စာတန်းထိုး စတူဒီယို",
         subtitle: "Gemini အသုံးပြု၍ တိကျသော SRT များကို ဖန်တီးပါ",
         apiKeyPlaceholder: "ကီး ထည့်ပါ (Browser တွင် သိမ်းမည်)",
-        saveKeyBtn: "Browser သို့ သိမ်းမည်",
+        saveKeyBtn: "Save Key",
         processLinkBtn: "သွားမည်",
         uploadTitle: "ဖိုင် တင်ရန်",
         uploadSub: "MP4, MP3, သို့ WAV",
@@ -48,18 +52,18 @@ const uiDictionary = {
 function setUiLanguage(lang) {
     currentUiLang = lang;
     localStorage.setItem('uiLang', lang);
-
+    
     // ခလုတ်ဒီဇိုင်း အပြောင်းအလဲ
     if(lang === 'en') {
-        langEnBtn.classList.add('lang-active');
-        langEnBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
-        langMyBtn.classList.remove('lang-active');
-        langMyBtn.classList.add('text-gray-500', 'hover:text-gray-700');
+        langEnBtn.classList.add('lang-active', 'bg-white', 'text-blue-600', 'shadow-sm');
+        langEnBtn.classList.remove('text-gray-500');
+        langMyBtn.classList.remove('lang-active', 'bg-white', 'text-blue-600', 'shadow-sm');
+        langMyBtn.classList.add('text-gray-500');
     } else {
-        langMyBtn.classList.add('lang-active');
-        langMyBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
-        langEnBtn.classList.remove('lang-active');
-        langEnBtn.classList.add('text-gray-500', 'hover:text-gray-700');
+        langMyBtn.classList.add('lang-active', 'bg-white', 'text-blue-600', 'shadow-sm');
+        langMyBtn.classList.remove('text-gray-500');
+        langEnBtn.classList.remove('lang-active', 'bg-white', 'text-blue-600', 'shadow-sm');
+        langEnBtn.classList.add('text-gray-500');
     }
 
     // HTML စာသားများကို အစားထိုးခြင်း
@@ -72,17 +76,28 @@ function setUiLanguage(lang) {
     document.querySelector('#dropZone p.text-blue-700').textContent = dict.uploadTitle;
     document.querySelector('#dropZone p.text-gray-500').textContent = dict.uploadSub;
     
-    // ဒေါင်းလုဒ်ခလုတ်က Disabled မဖြစ်နေမှသာ စာသားပြောင်းမည်
+    // 3-Step Guide ဘာသာပြန်ခြင်း
+    document.getElementById('apiGuideText').textContent = (lang === 'my') 
+        ? "၁။ Get API Key ကိုနှိပ်ပါ ➔ ၂။ Key ကို Copy ကူးပါ ➔ ၃။ ဤနေရာတွင် Paste ချ၍ Save ပါ။"
+        : "1. Click Get API Key \u2192 2. Copy the Key \u2192 3. Paste and Save here.";
+    
     if (!downloadBtn.disabled) {
         downloadBtn.innerHTML = dict.downloadBtn;
     }
+
+    // 🪲 Live Preview Terminal Synchronization Fix
+    if (activePhaseIndex >= 0 && activePhaseIndex < 4) { 
+        const logDictCurrent = (lang === 'my') ? logDict.my : logDict.en;
+        terminalLogs = [];
+        for (let i = 0; i <= activePhaseIndex; i++) {
+            terminalLogs.push(logDictCurrent[i]);
+        }
+        document.getElementById('srtPreview').textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(currentTerminalPercent);
+    }
 }
 
-// ခလုတ်နှိပ်လျှင် ဘာသာစကားပြောင်းရန်
 langEnBtn.addEventListener('click', () => setUiLanguage('en'));
 langMyBtn.addEventListener('click', () => setUiLanguage('my'));
-
-// Web ဖွင့်ဖွင့်ချင်း သိမ်းထားသော ဘာသာစကားကို ခေါ်သုံးရန်
 setUiLanguage(currentUiLang);
 
 
@@ -96,20 +111,15 @@ function switchTab(tabName) {
     if (tabName === 'studio') {
         studioView.classList.add('active');
         historyView.classList.remove('active');
-        
-        // Tab UI Active State
-        tabStudio.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
-        tabHistory.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
+        tabStudio.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
+        tabHistory.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
     } else {
         studioView.classList.remove('active');
         historyView.classList.add('active');
-        
-        // Tab UI Active State
-        tabHistory.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
-        tabStudio.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
+        tabHistory.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
+        tabStudio.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
     }
 }
-
 tabStudio.addEventListener('click', () => switchTab('studio'));
 tabHistory.addEventListener('click', () => switchTab('history'));
 
@@ -138,11 +148,58 @@ saveKeyBtn.addEventListener('click', () => {
 });
 loadApiKey();
 
-// --- 2. ADVANCED RATE LIMIT TIMER ---
-const COOLDOWN_SECONDS = 60;
+// --- 2. ADVANCED RATE LIMIT & COOLDOWN TIMER ---
+const COOLDOWN_SECONDS = 180; // 3 Minutes
+const HOURLY_LIMIT = 3;
 let timerInterval;
 
+function checkLimits() {
+    let taskHistory = JSON.parse(localStorage.getItem('taskHistory')) || [];
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    taskHistory = taskHistory.filter(time => time > oneHourAgo);
+    localStorage.setItem('taskHistory', JSON.stringify(taskHistory));
+
+    const endTime = localStorage.getItem('rateLimitEnd');
+    const remaining = endTime ? Math.max(0, Math.ceil((endTime - Date.now()) / 1000)) : 0;
+    
+    document.getElementById('taskCountText').textContent = taskHistory.length;
+
+    const isCooldown = remaining > 0;
+    const isLimitReached = taskHistory.length >= HOURLY_LIMIT;
+
+    const apiStatusText = document.getElementById('apiStatusText');
+    const apiSubText = document.getElementById('apiSubText');
+    const ownApiStatusBlock = document.getElementById('ownApiStatusBlock');
+    const btnGo = document.getElementById('processLinkBtn');
+
+    if (isLimitReached && !isCooldown) {
+        apiStatusText.textContent = "🚫 Own API (Limit Reached)";
+        apiStatusText.className = "font-bold text-red-600";
+        apiSubText.textContent = "Wait an hour for quota refresh";
+        ownApiStatusBlock.className = "px-3 py-2 bg-red-50 border-r border-red-100 flex flex-col justify-center min-w-[140px] transition-colors";
+        btnGo.disabled = true;
+    } else if (isCooldown) {
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        apiStatusText.textContent = "⏳ Own API (Cooldown)";
+        apiStatusText.className = "font-bold text-orange-600";
+        apiSubText.textContent = `Next task in ${mins}:${secs.toString().padStart(2, '0')}`;
+        ownApiStatusBlock.className = "px-3 py-2 bg-orange-50 border-r border-orange-100 flex flex-col justify-center min-w-[140px] transition-colors";
+        btnGo.disabled = true;
+    } else {
+        apiStatusText.textContent = "● Own API (Ready)";
+        apiStatusText.className = "font-bold text-green-600";
+        apiSubText.textContent = `Free Limit: ${taskHistory.length}/3 tasks per hour`;
+        ownApiStatusBlock.className = "px-3 py-2 bg-green-50 border-r border-green-100 flex flex-col justify-center min-w-[140px] transition-colors";
+        btnGo.disabled = false;
+    }
+}
+
 function startRateLimitTimer() {
+    let taskHistory = JSON.parse(localStorage.getItem('taskHistory')) || [];
+    taskHistory.push(Date.now());
+    localStorage.setItem('taskHistory', JSON.stringify(taskHistory));
+
     const endTime = Date.now() + (COOLDOWN_SECONDS * 1000);
     localStorage.setItem('rateLimitEnd', endTime);
     updateTimerUI();
@@ -150,33 +207,8 @@ function startRateLimitTimer() {
 
 function updateTimerUI() {
     clearInterval(timerInterval);
-    const timerCircle = document.getElementById('timerCircle');
-    const timerText = document.getElementById('timerText');
-    const timerStatus = document.getElementById('timerStatus');
-
-    timerInterval = setInterval(() => {
-        const endTime = localStorage.getItem('rateLimitEnd');
-        if (!endTime) return clearInterval(timerInterval);
-
-        const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        
-        if (remaining > 0) {
-            timerText.textContent = `${remaining}s`;
-            timerStatus.textContent = "Cooling down...";
-            timerStatus.className = "text-[10px] text-orange-500 font-semibold";
-            const percent = (remaining / COOLDOWN_SECONDS) * 100;
-            timerCircle.setAttribute('stroke-dashoffset', 100 - percent);
-            timerCircle.classList.replace('text-blue-600', 'text-orange-500');
-        } else {
-            timerText.textContent = "Rdy";
-            timerStatus.textContent = "Available";
-            timerStatus.className = "text-[10px] text-green-500 font-semibold";
-            timerCircle.setAttribute('stroke-dashoffset', 0);
-            timerCircle.classList.replace('text-orange-500', 'text-blue-600');
-            localStorage.removeItem('rateLimitEnd');
-            clearInterval(timerInterval);
-        }
-    }, 1000);
+    timerInterval = setInterval(() => { checkLimits(); }, 1000);
+    checkLimits();
 }
 updateTimerUI();
 
@@ -232,6 +264,7 @@ renderHistory();
 
 // --- 4. MAIN PROCESSING LOGIC ---
 const getApiKey = () => localStorage.getItem('geminiApiKey') || "";
+
 processLinkBtn.addEventListener('click', async () => {
     const url = videoLinkInput.value.trim();
     if (!url) return alert("⚠️ Link ထည့်ပါ။");
@@ -288,12 +321,10 @@ fileInput.addEventListener('change', async () => {
     fileInput.value = "";
 });
 
-// UI Helper Functions
 // UI Helper Functions & Terminal Progress Engine
 let terminalInterval;
 let terminalLogs = [];
 
-// Phase အလိုက် ဘာသာစကားခွဲခြားထားသော သတ်မှတ်ချက်များ (Dictionary)
 const logDict = {
     my: [
         "🚀 လုပ်ငန်းစဉ် စတင်နေပါပြီ... ဗီဒီယိုလင့်ခ်ကို စစ်ဆေးနေသည်။",
@@ -309,9 +340,8 @@ const logDict = {
     ]
 };
 
-//  Terminal Progress Bar ဖန်တီးပေးသည့် Function
 function renderProgressBar(percent) {
-    const totalBars = 25; // Bar ၏ အရှည်
+    const totalBars = 25;
     const filledBars = Math.round((percent / 100) * totalBars);
     const emptyBars = totalBars - filledBars;
     const barStr = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
@@ -319,64 +349,53 @@ function renderProgressBar(percent) {
 }
 
 function startUiProcessing(msg) {
-    // ယခင် Interval များကို ရှင်းလင်းခြင်း
     clearInterval(terminalInterval);
     terminalLogs = [];
+    activePhaseIndex = 0;
+    currentTerminalPercent = 0;
     
-    // ယူဆာ ရွေးချယ်ထားသော ဘာသာစကားကို ရှာဖွေခြင်း
-    const lang = document.getElementById('langSelect').value;
+    const lang = currentUiLang;
     const dict = (lang === 'my') ? logDict.my : logDict.en;
 
-    let currentPhase = 0;
-    let percent = 0;
-    
-    // UI Status များ ပြင်ဆင်ခြင်း
     fileStatus.textContent = "Processing...";
     fileStatus.classList.remove('hidden');
     downloadBtn.disabled = true;
     downloadBtn.className = "mt-4 w-full bg-gray-700 text-gray-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition flex items-center justify-center gap-2";
 
-    // Phase 1 စတင်ခြင်း
     terminalLogs.push(dict[0]);
-    currentPhase = 1;
 
-    // Terminal Progress Simulation (Smart Polling System)
     terminalInterval = setInterval(() => {
-        if (percent < 99) {
-            // Backend မှ Response မလာမချင်း 99% အထိသာ ရမ်းသမ်း၍ (Random) တက်မည်
-            percent += Math.floor(Math.random() * 2) + 1; 
-            if (percent > 99) percent = 99;
+        if (currentTerminalPercent < 99) {
+            currentTerminalPercent += Math.floor(Math.random() * 2) + 1; 
+            if (currentTerminalPercent > 99) currentTerminalPercent = 99;
         }
 
-        // ရာခိုင်နှုန်းအလိုက် Phase စာသားအသစ်များကို အောက်မှ ဆက်တိုက်ပေါင်းထည့်ခြင်း (Append)
-        if (percent > 20 && currentPhase === 1) {
+        if (currentTerminalPercent > 20 && activePhaseIndex === 0) {
+            activePhaseIndex = 1;
             terminalLogs.push(dict[1]);
-            currentPhase = 2;
-        } else if (percent > 55 && currentPhase === 2) {
+        } else if (currentTerminalPercent > 55 && activePhaseIndex === 1) {
+            activePhaseIndex = 2;
             terminalLogs.push(dict[2]);
-            currentPhase = 3;
-        } else if (percent > 85 && currentPhase === 3) {
+        } else if (currentTerminalPercent > 85 && activePhaseIndex === 2) {
+            activePhaseIndex = 3;
             terminalLogs.push(dict[3]);
-            currentPhase = 4;
         }
 
-        // စာသားများကို Terminal ပုံစံဖြင့် Preview Box တွင် Render လုပ်ခြင်း
-        srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(percent);
-    }, 1200); // 1.2 စက္ကန့်လျှင် တစ်ခါ Update ဖြစ်မည်
+        document.getElementById('srtPreview').textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(currentTerminalPercent);
+    }, 1200);
 }
 
 function handleSuccess(srtText, sourceName) {
-    // Interval ကို ရပ်တန့်ခြင်း
     clearInterval(terminalInterval);
+    activePhaseIndex = -1; // reset global phase
     
-    const lang = document.getElementById('langSelect').value;
+    const lang = currentUiLang;
     const successMsg = (lang === 'my') 
         ? "✅ စာတန်းထိုး ထွက်ပေါ်လာပါပြီ။ အောက်တွင် အစအဆုံး စမ်းသပ်ကြည့်ရှုနိုင်ပါသည်။" 
         : "🎉 Subtitles generated successfully! SRT compilation complete.";
 
     const cleanText = srtText.trim() + '\n\n';
     
-    // 100% ပြည့်သွားကြောင်းနှင့် Phase 5 အား ထပ်ပေါင်းထည့်ကာ SRT စာသားကို ချပြခြင်း
     srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(100) + '\n\n' + successMsg + '\n\n----------------------------------------------------\n\n' + cleanText;
     
     fileStatus.textContent = "✅ Success";
@@ -387,12 +406,11 @@ function handleSuccess(srtText, sourceName) {
 
 function handleError(error) {
     clearInterval(terminalInterval);
-    // Error တက်ပါက ယခင် Log များအောက်တွင် SYSTEM ERROR ဟု ရေးပြမည်
+    activePhaseIndex = -1; // reset global phase
     srtPreview.textContent = terminalLogs.join('\n\n') + `\n\n❌ [SYSTEM ERROR]: ${error.message}`;
     fileStatus.textContent = "❌ Failed";
     alert(`လုပ်ငန်းစဉ် မအောင်မြင်ပါ: ${error.message}`);
 }
-
 
 function setupDownload(srtText, originalName) {
     downloadBtn.disabled = false;
