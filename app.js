@@ -24,7 +24,6 @@ let currentUiLang = localStorage.getItem('uiLang') || 'en';
 let activePhaseIndex = -1;
 let currentTerminalPercent = 0;
 
-// UI စာသားများကို ဘာသာစကားအလိုက် ခွဲခြားသိမ်းဆည်းထားခြင်း
 const uiDictionary = {
     en: {
         title: "AI Subtitle Studio",
@@ -48,12 +47,10 @@ const uiDictionary = {
     }
 };
 
-// UI များကို ချက်ချင်း ပြောင်းလဲပေးမည့် Function
 function setUiLanguage(lang) {
     currentUiLang = lang;
     localStorage.setItem('uiLang', lang);
     
-    // ခလုတ်ဒီဇိုင်း အပြောင်းအလဲ
     if(lang === 'en') {
         langEnBtn.classList.add('lang-active', 'bg-white', 'text-blue-600', 'shadow-sm');
         langEnBtn.classList.remove('text-gray-500');
@@ -66,7 +63,6 @@ function setUiLanguage(lang) {
         langEnBtn.classList.add('text-gray-500');
     }
 
-    // HTML စာသားများကို အစားထိုးခြင်း
     const dict = uiDictionary[lang];
     document.querySelector('h1.text-3xl').textContent = dict.title;
     document.querySelector('p.text-gray-500.text-sm').textContent = dict.subtitle;
@@ -76,23 +72,26 @@ function setUiLanguage(lang) {
     document.querySelector('#dropZone p.text-blue-700').textContent = dict.uploadTitle;
     document.querySelector('#dropZone p.text-gray-500').textContent = dict.uploadSub;
     
-    // 3-Step Guide ဘာသာပြန်ခြင်း
-    document.getElementById('apiGuideText').textContent = (lang === 'my') 
-        ? "၁။ Get API Key ကိုနှိပ်ပါ ➔ ၂။ Key ကို Copy ကူးပါ ➔ ၃။ ဤနေရာတွင် Paste ချ၍ Save ပါ။"
-        : "1. Click Get API Key \u2192 2. Copy the Key \u2192 3. Paste and Save here.";
+    const apiGuideText = document.getElementById('apiGuideText');
+    if (apiGuideText) {
+        apiGuideText.textContent = (lang === 'my') 
+            ? "၁။ Get API Key ကိုနှိပ်ပါ ➔ ၂။ Key ကို Copy ကူးပါ ➔ ၃။ ဤနေရာတွင် Paste ချ၍ Save ပါ။"
+            : "1. Click Get API Key \u2192 2. Copy the Key \u2192 3. Paste and Save here.";
+    }
     
     if (!downloadBtn.disabled) {
         downloadBtn.innerHTML = dict.downloadBtn;
     }
 
-    // 🪲 Live Preview Terminal Synchronization Fix
     if (activePhaseIndex >= 0 && activePhaseIndex < 4) { 
         const logDictCurrent = (lang === 'my') ? logDict.my : logDict.en;
         terminalLogs = [];
         for (let i = 0; i <= activePhaseIndex; i++) {
             terminalLogs.push(logDictCurrent[i]);
         }
-        document.getElementById('srtPreview').textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(currentTerminalPercent);
+        if (srtPreview) {
+            srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(currentTerminalPercent);
+        }
     }
 }
 
@@ -111,17 +110,25 @@ function switchTab(tabName) {
     if (tabName === 'studio') {
         studioView.classList.add('active');
         historyView.classList.remove('active');
-        tabStudio.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
-        tabHistory.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
+        
+        // Studio Active 
+        tabStudio.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center justify-center gap-2";
+        tabHistory.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center justify-center gap-2";
     } else {
         studioView.classList.remove('active');
         historyView.classList.add('active');
-        tabHistory.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2";
-        tabStudio.className = "px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2";
+        
+        // History Active
+        tabHistory.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center justify-center gap-2";
+        tabStudio.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center justify-center gap-2";
     }
 }
-tabStudio.addEventListener('click', () => switchTab('studio'));
-tabHistory.addEventListener('click', () => switchTab('history'));
+
+if(tabStudio && tabHistory) {
+    tabStudio.addEventListener('click', () => switchTab('studio'));
+    tabHistory.addEventListener('click', () => switchTab('history'));
+}
+
 
 // --- 1. API KEY PERSISTENCE ---
 function loadApiKey() {
@@ -148,11 +155,13 @@ saveKeyBtn.addEventListener('click', () => {
 });
 loadApiKey();
 
+
 // --- 2. ADVANCED RATE LIMIT & COOLDOWN TIMER ---
-const COOLDOWN_SECONDS = 180; // 3 Minutes
+const COOLDOWN_SECONDS = 180;
 const HOURLY_LIMIT = 3;
 let timerInterval;
 
+// 🪲 (BUG FIXED: HTML Elements များကို မဖျက်စီးတော့ပါ)
 function checkLimits() {
     let taskHistory = JSON.parse(localStorage.getItem('taskHistory')) || [];
     const oneHourAgo = Date.now() - (60 * 60 * 1000);
@@ -162,8 +171,6 @@ function checkLimits() {
     const endTime = localStorage.getItem('rateLimitEnd');
     const remaining = endTime ? Math.max(0, Math.ceil((endTime - Date.now()) / 1000)) : 0;
     
-    document.getElementById('taskCountText').textContent = taskHistory.length;
-
     const isCooldown = remaining > 0;
     const isLimitReached = taskHistory.length >= HOURLY_LIMIT;
 
@@ -172,12 +179,14 @@ function checkLimits() {
     const ownApiStatusBlock = document.getElementById('ownApiStatusBlock');
     const btnGo = document.getElementById('processLinkBtn');
 
+    if (!apiStatusText || !apiSubText || !ownApiStatusBlock) return;
+
     if (isLimitReached && !isCooldown) {
         apiStatusText.textContent = "🚫 Own API (Limit Reached)";
         apiStatusText.className = "font-bold text-red-600";
         apiSubText.textContent = "Wait an hour for quota refresh";
         ownApiStatusBlock.className = "px-3 py-2 bg-red-50 border-r border-red-100 flex flex-col justify-center min-w-[140px] transition-colors";
-        btnGo.disabled = true;
+        if(btnGo) btnGo.disabled = true;
     } else if (isCooldown) {
         const mins = Math.floor(remaining / 60);
         const secs = remaining % 60;
@@ -185,13 +194,13 @@ function checkLimits() {
         apiStatusText.className = "font-bold text-orange-600";
         apiSubText.textContent = `Next task in ${mins}:${secs.toString().padStart(2, '0')}`;
         ownApiStatusBlock.className = "px-3 py-2 bg-orange-50 border-r border-orange-100 flex flex-col justify-center min-w-[140px] transition-colors";
-        btnGo.disabled = true;
+        if(btnGo) btnGo.disabled = true;
     } else {
         apiStatusText.textContent = "● Own API (Ready)";
         apiStatusText.className = "font-bold text-green-600";
         apiSubText.textContent = `Free Limit: ${taskHistory.length}/3 tasks per hour`;
         ownApiStatusBlock.className = "px-3 py-2 bg-green-50 border-r border-green-100 flex flex-col justify-center min-w-[140px] transition-colors";
-        btnGo.disabled = false;
+        if(btnGo) btnGo.disabled = false;
     }
 }
 
@@ -211,6 +220,7 @@ function updateTimerUI() {
     checkLimits();
 }
 updateTimerUI();
+
 
 // --- 3. TRANSLATION HISTORY ---
 function saveHistory(title, srtContent) {
@@ -232,9 +242,9 @@ function renderHistory() {
     historyList.innerHTML = '';
     
     if (history.length === 0) {
-        emptyHistoryMsg.style.display = 'block';
+        if(emptyHistoryMsg) emptyHistoryMsg.style.display = 'block';
     } else {
-        emptyHistoryMsg.style.display = 'none';
+        if(emptyHistoryMsg) emptyHistoryMsg.style.display = 'none';
         history.forEach(item => {
             const div = document.createElement('div');
             div.className = "bg-gray-50 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition group";
@@ -245,7 +255,7 @@ function renderHistory() {
             div.onclick = () => {
                 srtPreview.textContent = item.srt;
                 setupDownload(item.srt, item.title);
-                fileStatus.textContent = "Loaded from history";
+                fileStatus.textContent = (currentUiLang === 'my') ? "မှတ်တမ်းမှ ဖွင့်ထားသည်" : "Loaded from history";
                 fileStatus.classList.remove('hidden');
                 switchTab('studio');
             };
@@ -254,13 +264,17 @@ function renderHistory() {
     }
 }
 
-document.getElementById('clearHistoryBtn').onclick = () => {
-    if(confirm("သမိုင်းကြောင်း အားလုံးကို ဖျက်ရန် သေချာပါသလား?")) {
-        localStorage.removeItem('srtHistory');
-        renderHistory();
-    }
-};
+const clearBtn = document.getElementById('clearHistoryBtn');
+if(clearBtn) {
+    clearBtn.onclick = () => {
+        if(confirm("သမိုင်းကြောင်း အားလုံးကို ဖျက်ရန် သေချာပါသလား?")) {
+            localStorage.removeItem('srtHistory');
+            renderHistory();
+        }
+    };
+}
 renderHistory();
+
 
 // --- 4. MAIN PROCESSING LOGIC ---
 const getApiKey = () => localStorage.getItem('geminiApiKey') || "";
@@ -321,7 +335,8 @@ fileInput.addEventListener('change', async () => {
     fileInput.value = "";
 });
 
-// UI Helper Functions & Terminal Progress Engine
+
+// --- Terminal Progress Engine ---
 let terminalInterval;
 let terminalLogs = [];
 
@@ -357,7 +372,7 @@ function startUiProcessing(msg) {
     const lang = currentUiLang;
     const dict = (lang === 'my') ? logDict.my : logDict.en;
 
-    fileStatus.textContent = "Processing...";
+    fileStatus.textContent = (lang === 'my') ? "လုပ်ဆောင်နေသည်..." : "Processing...";
     fileStatus.classList.remove('hidden');
     downloadBtn.disabled = true;
     downloadBtn.className = "mt-4 w-full bg-gray-700 text-gray-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition flex items-center justify-center gap-2";
@@ -381,13 +396,15 @@ function startUiProcessing(msg) {
             terminalLogs.push(dict[3]);
         }
 
-        document.getElementById('srtPreview').textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(currentTerminalPercent);
+        if(srtPreview) {
+            srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(currentTerminalPercent);
+        }
     }, 1200);
 }
 
 function handleSuccess(srtText, sourceName) {
     clearInterval(terminalInterval);
-    activePhaseIndex = -1; // reset global phase
+    activePhaseIndex = -1;
     
     const lang = currentUiLang;
     const successMsg = (lang === 'my') 
@@ -396,9 +413,11 @@ function handleSuccess(srtText, sourceName) {
 
     const cleanText = srtText.trim() + '\n\n';
     
-    srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(100) + '\n\n' + successMsg + '\n\n----------------------------------------------------\n\n' + cleanText;
+    if(srtPreview) {
+        srtPreview.textContent = terminalLogs.join('\n\n') + '\n' + renderProgressBar(100) + '\n\n' + successMsg + '\n\n----------------------------------------------------\n\n' + cleanText;
+    }
     
-    fileStatus.textContent = "✅ Success";
+    fileStatus.textContent = (lang === 'my') ? "✅ အောင်မြင်ပါသည်" : "✅ Success";
     setupDownload(cleanText, sourceName);
     saveHistory(sourceName, cleanText);
     startRateLimitTimer();
@@ -406,9 +425,11 @@ function handleSuccess(srtText, sourceName) {
 
 function handleError(error) {
     clearInterval(terminalInterval);
-    activePhaseIndex = -1; // reset global phase
-    srtPreview.textContent = terminalLogs.join('\n\n') + `\n\n❌ [SYSTEM ERROR]: ${error.message}`;
-    fileStatus.textContent = "❌ Failed";
+    activePhaseIndex = -1;
+    if(srtPreview) {
+        srtPreview.textContent = terminalLogs.join('\n\n') + `\n\n❌ [SYSTEM ERROR]: ${error.message}`;
+    }
+    fileStatus.textContent = (currentUiLang === 'my') ? "❌ မအောင်မြင်ပါ" : "❌ Failed";
     alert(`လုပ်ငန်းစဉ် မအောင်မြင်ပါ: ${error.message}`);
 }
 

@@ -16,32 +16,38 @@
             <p class="text-gray-500 text-sm mt-1">Generate perfect SRTs powered by Gemini</p>
         </div>
 
-        <div class="flex items-center gap-3">
-            <div class="flex bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden text-xs">
-                <div id="ownApiStatusBlock" class="px-3 py-2 bg-green-50 border-r border-green-100 flex flex-col justify-center min-w-[140px] transition-colors">
-                    <span id="apiStatusText" class="font-bold text-green-600">● Own API (Ready)</span>
-                    <span id="apiSubText" class="text-green-500 text-[10px]">Free Limit: <span id="taskCountText">0</span>/3 tasks per hour</span>
+                <div class="flex flex-col sm:flex-row items-center gap-3 mt-4 md:mt-0 w-full md:w-auto">
+            
+            <div class="flex items-center justify-between w-full sm:w-auto gap-2">
+                <div class="flex bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden text-xs flex-1">
+                    <div id="ownApiStatusBlock" class="px-2 py-2 bg-green-50 border-r border-green-100 flex flex-col justify-center min-w-[120px] transition-colors">
+                        <span id="apiStatusText" class="font-bold text-green-600">● Own API (Ready)</span>
+                        <span id="apiSubText" class="text-green-500 text-[10px]">Free Limit: <span id="taskCountText">0</span>/3 tasks</span>
+                    </div>
+                    <div class="px-2 py-2 bg-gray-50 flex flex-col justify-center opacity-50 cursor-not-allowed hidden min-[360px]:flex">
+                        <span class="font-bold text-gray-500">● App API</span>
+                        <span class="text-gray-400 text-[10px]">Coming Soon</span>
+                    </div>
                 </div>
-                <div class="px-3 py-2 bg-gray-50 flex flex-col justify-center opacity-50 cursor-not-allowed">
-                    <span class="font-bold text-gray-500">● App API</span>
-                    <span class="text-gray-400 text-[10px]">Premium - Coming Soon</span>
+
+                <div class="bg-white border border-gray-200 p-1 rounded-xl flex items-center shadow-sm text-[11px] font-bold shrink-0">
+                    <button id="langEnBtn" class="px-2 py-1.5 rounded-lg transition-all text-gray-500 hover:text-gray-700 hover:bg-gray-50">EN</button>
+                    <button id="langMyBtn" class="px-2 py-1.5 rounded-lg transition-all text-gray-500 hover:text-gray-700 hover:bg-gray-50">MM</button>
                 </div>
             </div>
 
-            <div class="bg-gray-200/80 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner hidden sm:flex">
-                <button id="tabStudio" class="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center gap-2">
+            <div class="bg-gray-200/80 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner w-full sm:w-auto">
+                <button id="tabStudio" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-gray-900 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i> Studio
                 </button>
-                <button id="tabHistory" class="px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center gap-2">
+                <button id="tabHistory" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 hover:text-gray-700 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-clock-rotate-left text-orange-500"></i> History
                 </button>
             </div>
-
-            <div class="bg-white border border-gray-200 p-1 rounded-xl flex items-center shadow-sm text-xs font-bold">
-                <button id="langEnBtn" class="px-3 py-1.5 rounded-lg transition-all text-gray-500 hover:text-gray-700 hover:bg-gray-50">EN</button>
-                <button id="langMyBtn" class="px-3 py-1.5 rounded-lg transition-all text-gray-500 hover:text-gray-700 hover:bg-gray-50">MM</button>
-            </div>
+            
         </div>
+
+
     </header>
 
     <main class="flex-1 p-4 md:p-8 overflow-y-auto relative w-full pt-0">
