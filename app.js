@@ -157,8 +157,9 @@ saveKeyBtn.addEventListener('click', async () => {
 
     // 🛡️ Phase A: Frontend Format Check
     if (key !== ADMIN_PASSWORD) {
-        // AIzaSy ဖြင့်စတင်ပြီး စုစုပေါင်း စာလုံးရေ ၃၉ လုံးဝန်းကျင်ရှိရမည့် Regex Check
-        const geminiKeyRegex = /^AIzaSy[A-Za-z0-9_\-]{33}$/;
+       // AIzaSy (ပုံစံဟောင်း) သို့မဟုတ် AQ. (ပုံစံအသစ်) နှစ်မျိုးလုံးကို အလုပ်လုပ်စေမည့် Regex
+        const geminiKeyRegex = /^(AIzaSy[A-Za-z0-9_\-]{33}|AQ\.[A-Za-z0-9_\-]+)$/;
+
         if (!geminiKeyRegex.test(key)) {
             alert("❌ မှားယွင်းသော Gemini API Key ပုံစံ ဖြစ်နေပါသည်");
             return;
