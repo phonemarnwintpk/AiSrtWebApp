@@ -1,6 +1,33 @@
 // ⚠️ သင်၏ Hugging Face Space URL
 const BACKEND_URL = "https://marnlaypk-aisrtwebappbackend.hf.space";
 
+// --- FIREBASE CONFIGURATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyD2i8AWzfuxYA_W7la7hRdc_M4mUdvatLI",
+  authDomain: "aisrtwebapp.firebaseapp.com",
+  projectId: "aisrtwebapp",
+  storageBucket: "aisrtwebapp.firebasestorage.app",
+  messagingSenderId: "555894195117",
+  appId: "1:555894195117:web:fd1095208764865e1c5724"
+};
+
+// Initialize Firebase Realtime Database
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// --- DEVICE BINDING LOGIC ---
+// Browser အတွက် သီးသန့် Device UUID ဖန်တီးပေးသော Function
+function getOrCreateDeviceToken() {
+    let token = localStorage.getItem('device_token');
+    if (!token) {
+        // ရိုးရှင်းသော UUID ဖန်တီးနည်း
+        token = 'device_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+        localStorage.setItem('device_token', token);
+    }
+    return token;
+}
+const currentDeviceToken = getOrCreateDeviceToken();
+
 // UI Elements
 const apiKeyInput = document.getElementById('apiKey');
 const saveKeyBtn = document.getElementById('saveKeyBtn');
@@ -150,27 +177,58 @@ saveKeyBtn.addEventListener('click', async () => {
     
     if (!key) {
         localStorage.removeItem('geminiApiKey');
+        localStorage.removeItem('isVip'); // VIP status ကိုပါ ဖြုတ်မည်
         keyStatusBadge.textContent = "Not Saved";
         keyStatusBadge.className = "px-2 py-1 bg-red-100 text-red-600 text-[10px] rounded-full font-bold";
         return;
     }
 
-    // 🛡️ Phase A: Frontend Format Check
-    if (key !== ADMIN_PASSWORD) {
-       // AIzaSy (ပုံစံဟောင်း) သို့မဟုတ် AQ. (ပုံစံအသစ်) နှစ်မျိုးလုံးကို အလုပ်လုပ်စေမည့် Regex
-        const geminiKeyRegex = /^(AIzaSy[A-Za-z0-9_\-]{33}|AQ\.[A-Za-z0-9_\-]+)$/;
-
-        if (!geminiKeyRegex.test(key)) {
-            alert("❌ မှားယွင်းသော Gemini API Key ပုံစံ ဖြစ်နေပါသည်");
-            return;
-        }
-    }
-
-    // 🛡️ Phase B: Backend Live Ping Validation
-    saveKeyBtn.textContent = "Validating...";
+    saveKeyBtn.textContent = "Checking...";
     saveKeyBtn.disabled = true;
 
     try {
+        let isVipUser = false;
+
+        if (key === ADMIN_PASSWORD) {
+            isVipUser = true; // Admin သည် VIP အလိုအလျောက်ဖြစ်သည်
+        } else {
+            // 🛡️ Firebase တွင် VIP Key ဟုတ်မဟုတ် စစ်ဆေးခြင်း
+            const vipRef = db.ref('vip_keys/' + key);
+            const snapshot = await vipRef.once('value');
+            
+            if (snapshot.exists()) {
+                const vipData = snapshot.val();
+                
+                // Scenario B: New VIP User - Unbound (DeviceId မရှိသေးလျှင်)
+                if (!vipData.deviceId || vipData.deviceId === "") {
+                    await vipRef.update({ deviceId: currentDeviceToken });
+                    isVipUser = true;
+                } 
+                // Scenario C: Returning VIP User - Matched
+                else if (vipData.deviceId === currentDeviceToken) {
+                    isVipUser = true;
+                } 
+                // Scenario D: Thief/Shared Key - Mismatched
+                else {
+                    alert("❌ ဤ API Key သည် အခြားစက်တွင် အသုံးပြုထားပြီးဖြစ်ပါသည် (This key is already bound to another device)");
+                    saveKeyBtn.textContent = "Save Key";
+                    saveKeyBtn.disabled = false;
+                    return; // သိမ်းဆည်းခြင်းကို ရပ်တန့်မည်
+                }
+            } else {
+                // Scenario A: Normal Public User
+                const geminiKeyRegex = /^(AIzaSy[A-Za-z0-9_\-]{33}|AQ\.[A-Za-z0-9_\-]+)$/;
+                if (!geminiKeyRegex.test(key)) {
+                    alert("❌ မှားယွင်းသော Gemini API Key ပုံစံ ဖြစ်နေပါသည်");
+                    saveKeyBtn.textContent = "Save Key";
+                    saveKeyBtn.disabled = false;
+                    return;
+                }
+            }
+        }
+
+        // 🛡️ Phase B: Backend Live Ping Validation (Firebase မှတ်ပြီးမှ Gemini API အမှန်/အမှား စစ်မည်)
+        saveKeyBtn.textContent = "Validating...";
         const formData = new FormData();
         formData.append("apiKey", key);
         
@@ -179,15 +237,18 @@ saveKeyBtn.addEventListener('click', async () => {
 
         if (data.valid) {
             localStorage.setItem('geminiApiKey', key);
+            localStorage.setItem('isVip', isVipUser); // VIP မှန်ကန်ပါက LocalStorage တွင် မှတ်ထားမည်
+
             keyStatusBadge.textContent = "Saved";
             keyStatusBadge.className = "px-2 py-1 bg-green-100 text-green-600 text-[10px] rounded-full font-bold";
-            alert(key === ADMIN_PASSWORD ? "👑 Admin Mode ပွင့်သွားပါပြီ။" : "✅ API Key မှန်ကန်ပြီး အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ။");
-            checkLimits(); // UI Status ကို ချက်ချင်း Update လုပ်ရန်
+            alert(isVipUser ? "🎉 VIP Mode အောင်မြင်စွာ ဖွင့်လှစ်ပြီးပါပြီ။" : "✅ API Key မှန်ကန်ပြီး အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ။");
+            checkLimits(); 
         } else {
             alert("❌ ဤ API Key သည် သက်တမ်းကုန်ဆုံးနေပါသည် သို့မဟုတ် အသုံးမပြုနိုင်ပါ။");
         }
     } catch (error) {
-        alert("⚠️ ဆာဗာနှင့် ချိတ်ဆက်ရာတွင် အခက်အခဲရှိနေပါသည်။");
+        console.error(error);
+        alert("⚠️ ဆာဗာ သို့မဟုတ် Firebase နှင့် ချိတ်ဆက်ရာတွင် အခက်အခဲရှိနေပါသည်။");
     } finally {
         saveKeyBtn.textContent = "Save Key";
         saveKeyBtn.disabled = false;
@@ -213,9 +274,11 @@ function checkLimits() {
 
     if (!apiStatusText || !apiSubText || !ownApiStatusBlock) return;
 
-    // 👑 Admin Bypass Logic
-    if (currentKey === ADMIN_PASSWORD) {
-        apiStatusText.textContent = "● Own API (Admin Mode)";
+    // 👑 Admin & VIP Bypass Logic
+    const isVip = localStorage.getItem('isVip') === 'true'; // VIP မှတ်သားထားခြင်း
+
+    if (currentKey === ADMIN_PASSWORD || isVip) {
+        apiStatusText.textContent = isVip ? "● Own API (VIP Mode)" : "● Own API (Admin Mode)";
         apiStatusText.className = "font-bold text-blue-600";
         apiSubText.textContent = "Unlimited Access";
         ownApiStatusBlock.className = "px-3 py-2 bg-blue-50 border-r border-blue-100 flex flex-col justify-center min-w-[140px] transition-colors";
