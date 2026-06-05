@@ -249,7 +249,7 @@ saveKeyBtn.addEventListener('click', async () => {
         }
     } catch (error) {
         console.error(error);
-        alert("⚠️ ဆာဗာ သို့မဟုတ် Firebase နှင့် ချိတ်ဆက်ရာတွင် အခက်အခဲရှိနေပါသည်။");
+        alert("⚠️ Error အသေးစိတ်: " + error.message);
     } finally {
         saveKeyBtn.textContent = "Save Key";
         saveKeyBtn.disabled = false;
