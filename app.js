@@ -173,15 +173,19 @@ function loadApiKey() {
 }
 
 saveKeyBtn.addEventListener('click', async () => {
-    const key = apiKeyInput.value.trim();
+    // CRITICAL: Gemini API တွင် အသုံးပြုရန် အစက် (.) ပါဝင်သော မူရင်း Key
+    const originalKey = apiKeyInput.value.trim(); 
     
-    if (!key) {
+    if (!originalKey) {
         localStorage.removeItem('geminiApiKey');
-        localStorage.removeItem('isVip'); // VIP status ကိုပါ ဖြုတ်မည်
+        localStorage.removeItem('isVip'); 
         keyStatusBadge.textContent = "Not Saved";
         keyStatusBadge.className = "px-2 py-1 bg-red-100 text-red-600 text-[10px] rounded-full font-bold";
         return;
     }
+
+    // 1. Sanitize for Firebase: Firebase တွင် ရှာဖွေရန် အစက် (.) ကို မျဉ်းအောက်တို (_) ဖြင့် အစားထိုးခြင်း
+    const safeApiKey = originalKey.replace(/\./g, '_');
 
     saveKeyBtn.textContent = "Checking...";
     saveKeyBtn.disabled = true;
@@ -189,36 +193,32 @@ saveKeyBtn.addEventListener('click', async () => {
     try {
         let isVipUser = false;
 
-        if (key === ADMIN_PASSWORD) {
-            isVipUser = true; // Admin သည် VIP အလိုအလျောက်ဖြစ်သည်
+        if (originalKey === ADMIN_PASSWORD) {
+            isVipUser = true; 
         } else {
-            // 🛡️ Firebase တွင် VIP Key ဟုတ်မဟုတ် စစ်ဆေးခြင်း
-            const vipRef = db.ref('vip_keys/' + key);
+            // 2. Database Lookup: Firebase တွင် စစ်ဆေးရန် safeApiKey ကိုသာ တိတိကျကျ အသုံးပြုမည်
+            const vipRef = db.ref('vip_keys/' + safeApiKey);
             const snapshot = await vipRef.once('value');
             
             if (snapshot.exists()) {
                 const vipData = snapshot.val();
                 
-                // Scenario B: New VIP User - Unbound (DeviceId မရှိသေးလျှင်)
                 if (!vipData.deviceId || vipData.deviceId === "") {
                     await vipRef.update({ deviceId: currentDeviceToken });
                     isVipUser = true;
-                } 
-                // Scenario C: Returning VIP User - Matched
-                else if (vipData.deviceId === currentDeviceToken) {
+                } else if (vipData.deviceId === currentDeviceToken) {
                     isVipUser = true;
-                } 
-                // Scenario D: Thief/Shared Key - Mismatched
-                else {
+                } else {
                     alert("❌ ဤ API Key သည် အခြားစက်တွင် အသုံးပြုထားပြီးဖြစ်ပါသည် (This key is already bound to another device)");
                     saveKeyBtn.textContent = "Save Key";
                     saveKeyBtn.disabled = false;
-                    return; // သိမ်းဆည်းခြင်းကို ရပ်တန့်မည်
+                    return; 
                 }
             } else {
                 // Scenario A: Normal Public User
                 const geminiKeyRegex = /^(AIzaSy[A-Za-z0-9_\-]{33}|AQ\.[A-Za-z0-9_\-]+)$/;
-                if (!geminiKeyRegex.test(key)) {
+                // Format Check အတွက် မူရင်း originalKey ကို အသုံးပြုမည်
+                if (!geminiKeyRegex.test(originalKey)) {
                     alert("❌ မှားယွင်းသော Gemini API Key ပုံစံ ဖြစ်နေပါသည်");
                     saveKeyBtn.textContent = "Save Key";
                     saveKeyBtn.disabled = false;
@@ -227,17 +227,18 @@ saveKeyBtn.addEventListener('click', async () => {
             }
         }
 
-        // 🛡️ Phase B: Backend Live Ping Validation (Firebase မှတ်ပြီးမှ Gemini API အမှန်/အမှား စစ်မည်)
+        // 🛡️ Phase B: Backend Live Ping Validation (မူရင်း originalKey ကိုသာ အသုံးပြုမည်)
         saveKeyBtn.textContent = "Validating...";
         const formData = new FormData();
-        formData.append("apiKey", key);
+        formData.append("apiKey", originalKey);
         
         const res = await fetch(`${BACKEND_URL}/validate-key`, { method: "POST", body: formData });
         const data = await res.json();
 
         if (data.valid) {
-            localStorage.setItem('geminiApiKey', key);
-            localStorage.setItem('isVip', isVipUser); // VIP မှန်ကန်ပါက LocalStorage တွင် မှတ်ထားမည်
+            // 3. CRITICAL: LocalStorage သို့ သိမ်းရာတွင် အစက် (.) ပါဝင်သော မူရင်း originalKey ကိုသာ အတိအကျ သိမ်းမည်
+            localStorage.setItem('geminiApiKey', originalKey);
+            localStorage.setItem('isVip', isVipUser); 
 
             keyStatusBadge.textContent = "Saved";
             keyStatusBadge.className = "px-2 py-1 bg-green-100 text-green-600 text-[10px] rounded-full font-bold";
@@ -254,6 +255,7 @@ saveKeyBtn.addEventListener('click', async () => {
         saveKeyBtn.disabled = false;
     }
 });
+
 
 loadApiKey();
 
