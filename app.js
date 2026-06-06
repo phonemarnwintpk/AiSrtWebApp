@@ -3,12 +3,13 @@ const BACKEND_URL = "https://marnlaypk-aisrtwebappbackend.hf.space";
 
 // --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
-  apiKey: "AIzaSyD2i8AWzfuxYA_W7la7hRdc_M4mUdvatLI",
-  authDomain: "aisrtwebapp.firebaseapp.com",
-  projectId: "aisrtwebapp",
-  storageBucket: "aisrtwebapp.firebasestorage.app",
-  messagingSenderId: "555894195117",
-  appId: "1:555894195117:web:fd1095208764865e1c5724"
+    apiKey: "AIzaSyD2i8AWzfuxYA_W7la7hRdc_M4mUdvatLI",
+    authDomain: "aisrtwebapp.firebaseapp.com",
+    databaseURL: "https://aisrtwebapp-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "aisrtwebapp",
+    storageBucket: "aisrtwebapp.firebasestorage.app",
+    messagingSenderId: "555894195117",
+    appId: "1:555894195117:web:fd1095208764865e1c5724"
 };
 
 // Initialize Firebase Realtime Database
