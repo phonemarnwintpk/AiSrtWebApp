@@ -232,7 +232,8 @@ saveKeyBtn.addEventListener('click', async () => {
         const formData = new FormData();
         formData.append("apiKey", originalKey);
         
-        const res = await fetch(`${BACKEND_URL}/validate-key`, { method: "POST", body: formData });
+        // ဤစာကြောင်းကို ပြင်ပါ
+        const res = await fetch(`https://marnlaypk-aisrtwebappbackend.hf.space/validate-key`, { method: "POST", body: formData });
         const data = await res.json();
 
         if (data.valid) {
@@ -418,7 +419,7 @@ processLinkBtn.addEventListener('click', async () => {
         formData.append("apiKey", getApiKey());
         formData.append("lang", lang);
 
-        const res = await fetch(`${BACKEND_URL}/process-url`, { method: "POST", body: formData });
+        const res = await fetch(`https://marnlaypk-aisrtwebappbackend.hf.space/process-url`, { method: "POST", body: formData });
         if (!res.ok) throw new Error(await res.text());
         
         const data = await res.json();
@@ -449,7 +450,7 @@ fileInput.addEventListener('change', async () => {
         formData.append("apiKey", getApiKey());
         formData.append("lang", lang);
 
-        const res = await fetch(`${BACKEND_URL}/upload-single`, { method: "POST", body: formData });
+        const res = await fetch(`https://marnlaypk-aisrtwebappbackend.hf.space/upload-single`, { method: "POST", body: formData });
         if (!res.ok) throw new Error(await res.text());
         
         const data = await res.json();
